@@ -5,13 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Record extends Model
+class Disposable extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'date',
-        'status',
-    ];
+    protected $fillable = ['name', 'quantity'];
 }

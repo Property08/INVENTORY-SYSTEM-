@@ -13,12 +13,8 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('records', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->date('date');
-            $table->string('status');
-            $table->timestamps();
+        Schema::table('rpcppe', function (Blueprint $table) {
+            $table->dropColumn(['created_at', 'updated_at']);
         });
     }
 
@@ -29,6 +25,8 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('records');
+        Schema::table('rpcppe', function (Blueprint $table) {
+            $table->timestamps();
+        });
     }
 };
