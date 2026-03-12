@@ -17,6 +17,10 @@ return new class extends Migration
         $table->id();
         $table->string('name');
         $table->integer('quantity')->default(0);
+        $table->string('property_number');
+        $table->text('description')->nullable();
+        $table->date('DateAcquired')->nullable();
+        $table->string('WMR_num');  
         $table->timestamps();
     });
 }

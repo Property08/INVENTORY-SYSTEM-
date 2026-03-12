@@ -14,9 +14,15 @@ module.exports = {
                 cream: {
                     100: "#FFFDD0", // fixed typo (last char is zero, not 'O')
                 },
-                navy: {
+                navyblue: {
                     900: "#001F3F",
                 },
+                lightblue: {
+                    300: "#ADD8E6",
+                },
+                snow:{
+                    100: "#FFFAFA",
+                }
             },
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],

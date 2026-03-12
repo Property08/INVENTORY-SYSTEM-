@@ -21,13 +21,7 @@
         </a>
     </div>
 
-    <div class="bg-white shadow-md rounded-2xl p-6 hover:shadow-xl transition">
-        <h2 class="text-xl font-semibold mb-2">Import Records</h2>
-        <p class="text-gray-600">View and manage import records.</p>
-        <a href="{{ route('recap') }}" class="mt-3 inline-block text-[#001F3F] font-semibold hover:underline">
-            View RECAP SUMMARY →
-        </a>
-    </div>
+    
 
 </div>
 @endsection

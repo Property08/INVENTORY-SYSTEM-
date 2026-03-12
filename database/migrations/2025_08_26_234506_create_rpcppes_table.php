@@ -13,7 +13,7 @@ return new class extends Migration
           //  $table->string('rpcppe_id')->unique(); // Unique auto-generated ID
             $table->string('article');
             $table->text('description')->nullable();
-            $table->string('property_no', 100)->nullable();
+            $table->string('property_no')->unique();
             $table->decimal('unit_value', 15, 2)->nullable();
             $table->string('unit_of_measure', 50)->nullable();
             $table->integer('quantity_per_property_card')->nullable();

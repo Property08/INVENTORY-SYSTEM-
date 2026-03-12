@@ -9,5 +9,15 @@ class Disposable extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'quantity'];
+    protected $fillable = [
+  'article',           // Added
+    'name',
+    'quantity',
+    'unit_value',        // Added
+    'property_number',
+    'description',
+    'DateAcquired',
+    'year', 
+    'WMR_num',
+];
 }

@@ -3,63 +3,99 @@
 namespace App\Http\Controllers;
 
 use App\Models\Rpcppe;
+use App\Models\Disposable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\RpcppeExport;
+use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Writer\Xls; // use Xlsx if template is .xlsx
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use App\Imports\RpcppeImport;
+use Illuminate\Support\Facades\Log;
 
 class RpcppeController extends Controller
 {
-    /**
-     * Build the base query with optional search & filter.
-     */
+    // Ginagamit para sa consistent na mapping sa buong controller
+    private function getClassificationMapping($prefix)
+    {
+        $prefix = strtoupper(trim($prefix));
+        $mapping = [
+            '201' => 'LAND', 
+            '202' => 'LAND IMPROVEMENT', 
+            '211' => 'BUILDING AND STRUCTURE',
+            '215' => 'OTHER STRUCTURES', 
+            '221' => 'OFFICE EQUIPMENT', 
+            '208' => 'MEDICAL, DENTAL & LABORATORY EQUIPMENT',
+            '241' => 'MOTOR VEHICLES', 
+            '236' => 'TECHNICAL & SCIENTIFIC EQUIPMENT', 
+            '240' => 'OTHER MACHINERIES & EQUIPMENT',
+            '235' => 'SPORTS EQUIPMENT', 
+            '223' => 'INFORMATION AND COMM. TECH. EQUIPMENT', 
+            '229' => 'COMMUNICATION EQUIPMENT',
+            '250' => 'HANDS TOOL', 
+            '255D' => 'INDUSTRIAL MACHINES & IMPLEMENTS', 
+            '254' => 'ARTESIAN WELLS',
+            '222' => 'OFFICE FURNITURES', 
+            '10605120' => 'PRINTING EQUIPMENT', 
+            '10605010' => 'MACHINERY & EQUIPMENT',
+            '10603060' => 'COMMUNICATION NETWORK', 
+            'HV' => 'SEMI-EXPENDABLE (High Value)', 
+            'LV' => 'SEMI-EXPENDABLE (Low Value)',
+        ];
+
+        return $mapping[$prefix] ?? 'OTHERS';
+    }
+
     private function buildQuery(Request $request)
     {
         $query = Rpcppe::query();
 
-        // Text search across several columns
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('article', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('property_no', 'like', "%{$search}%")
-                  ->orWhere('accountable_person', 'like', "%{$search}%")
-                  ->orWhere('location', 'like', "%{$search}%")
-                  ->orWhere('division', 'like', "%{$search}%")
-                  ->orWhere('section_unit', 'like', "%{$search}%")
-                  ->orWhere('remarks', 'like', "%{$search}%");
+        if ($request->filled('article')) {
+            $query->where('article', 'like', "%{$request->article}%");
+        }
+        if ($request->filled('property_no')) {
+            $query->where('property_no', 'like', "%{$request->property_no}%");
+        }
+        if ($request->filled('date_acquired')) {
+            $query->where('date_acquired', 'like', "%{$request->date_acquired}%");
+        }
+        if ($request->filled('person')) {
+            $query->where(function($q) use ($request) {
+                $q->where('accountable_person', 'like', "%{$request->person}%")
+                  ->orWhere('transfer_to', 'like', "%{$request->person}%");
             });
         }
-
-        // Optional filter column (whitelisted)
-        $allowedFilters = [
-            'article','description','property_no','accountable_person',
-            'location','division','section_unit','remarks'
-        ];
-        if ($request->filled('filter') && $request->filled('search')) {
-            $filter = $request->input('filter');
-            if (in_array($filter, $allowedFilters, true)) {
-                $query->where($filter, 'like', "%{$request->search}%");
-            }
+        if ($request->filled('location')) {
+            $query->where('location', 'LIKE', '%' . $request->location . '%');
+        }
+        if ($request->filled('division')) {
+            $query->where('division', 'LIKE', '%' . $request->division . '%');
+        }
+        if ($request->filled('description')) {
+            $query->where('description', 'like', "%{$request->description}%");
         }
 
         return $query;
     }
 
-    /* ---------- LIST ---------- */
     public function index(Request $request)
     {
+        $allPropertyNumbers = Rpcppe::distinct()->pluck('property_no')->sort();
+        $locations = Rpcppe::whereNotNull('location')->distinct()->pluck('location')->sort();
+        $names1 = Rpcppe::whereNotNull('accountable_person')->distinct()->pluck('accountable_person');
+        $names2 = Rpcppe::whereNotNull('transfer_to')->distinct()->pluck('transfer_to');
+        $allNames = $names1->merge($names2)->unique()->sort();
+        
         $items = $this->buildQuery($request)
-                      ->orderBy('id', 'desc') // ✅ latest data first using ID
-                      ->paginate(10);
+                    ->orderBy('property_no', 'asc')
+                    ->orderBy('date_acquired', 'desc')
+                    ->paginate(50) 
+                    ->withQueryString();
 
-        return view('rpcppe.index', compact('items'));
+        return view('rpcppe.index', compact('items', 'locations', 'allNames', 'allPropertyNumbers'));
     }
 
-    /* ---------- CREATE / STORE ---------- */
     public function create()
     {
         return view('rpcppe.create');
@@ -68,30 +104,35 @@ class RpcppeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'article'                    => 'required|string|max:255',
-            'description'                => 'nullable|string',
-            'property_no'                => 'required|string|max:255',
-            'unit_value'                 => 'nullable|numeric',
-            'unit_of_measure'            => 'nullable|string|max:255',
-            'quantity_per_property_card'  => 'nullable|integer',
+            'property_no' => 'required|string|unique:rpcppe,property_no', 
+            'article' => 'nullable|string',
+            'description' => 'nullable|string',
+            'unit_of_measure' => 'nullable|string',
+            'unit_value' => 'nullable|numeric',
+            'quantity_per_property_card' => 'nullable|integer',
             'quantity_per_physical_count' => 'nullable|integer',
-            'remarks'                    => 'nullable|string',
-            'date_acquired'              => 'nullable|date',
-            'accountable_person'         => 'nullable|string|max:255',
-            'location'                   => 'nullable|string|max:255',
-            'ptsd'                       => 'nullable|string|max:255',
-            'division'                   => 'nullable|string|max:255',
-            'section_unit'               => 'nullable|string|max:255',
-            'transfer_to'                => 'nullable|string|max:255',
-            'shortage_overage_qty'       => 'nullable|integer',
-            'shortage_overage_value'     => 'nullable|numeric',
+            'shortage_overage_qty' => 'nullable|integer',
+            'shortage_overage_value' => 'nullable|numeric',
+            'remarks' => 'nullable|string',
+            'date_acquired' => 'nullable|string|max:255',
+            'accountable_person' => 'nullable|string',
+            'location' => 'nullable|string',
+            'division' => 'nullable|string',
+            'section_unit' => 'nullable|string',
+            'ptsd' => 'nullable|string',
+            'transfer_to' => 'nullable|string',
+        ], [
+            'property_no.unique' => ' (' . $request->property_no . ') nauna nang nakarehistro.',
         ]);
 
+        // Smart Classification Logic
+        $prefix = explode('-', $request->property_no)[0];
+        $validated['classification'] = $this->getClassificationMapping($prefix);
+
         Rpcppe::create($validated);
-        return redirect()->route('rpcppe.index')->with('action', 'add');
+        return redirect()->route('rpcppe.index')->with('success', 'New record added successfully!');
     }
 
-    /* ---------- EDIT / UPDATE ---------- */
     public function edit(int $id)
     {
         $rpcppe = Rpcppe::findOrFail($id);
@@ -101,99 +142,172 @@ class RpcppeController extends Controller
     public function update(Request $request, int $id)
     {
         $rpcppe = Rpcppe::findOrFail($id);
-
+        
         $validated = $request->validate([
-            'property_no'        => 'required|string|max:255',
-            'article'            => 'required|string|max:255',
-            'description'        => 'nullable|string',
-            'remarks'            => 'nullable|string',
-            'accountable_person' => 'nullable|string|max:255',
-            'location'           => 'nullable|string|max:255',
-            'ptsd'               => 'nullable|string|max:255',
-            'division'           => 'nullable|string|max:255',
-            'section_unit'       => 'nullable|string|max:255',
-            'transfer_to'        => 'nullable|string|max:255',
+            'property_no' => 'required|string|unique:rpcppe,property_no,' . $id, 
+            'article' => 'nullable|string',
+            'description' => 'nullable|string',
+            'unit_of_measure' => 'nullable|string',
+            'unit_value' => 'nullable|numeric',
+            'quantity_per_property_card' => 'nullable|integer',
+            'quantity_per_physical_count' => 'nullable|integer',
+            'shortage_overage_qty' => 'nullable|integer',
+            'shortage_overage_value' => 'nullable|numeric',
+            'remarks' => 'nullable|string',
+            'date_acquired' => 'nullable|string|max:255',
+            'accountable_person' => 'nullable|string',
+            'location' => 'nullable|string',
+            'division' => 'nullable|string',
+            'section_unit' => 'nullable|string',
+            'ptsd' => 'nullable|string', // Idinagdag para masave ang PTSD
+            'transfer_to' => 'nullable|string', // Idinagdag para masave ang Transfer_to
         ]);
 
+        // Smart Re-classification Logic
+        $prefix = explode('-', $request->property_no)[0];
+        $validated['classification'] = $this->getClassificationMapping($prefix);
+
         $rpcppe->update($validated);
-        return redirect()->route('rpcppe.index')->with('action', 'edit');
+
+        // Redirect pabalik sa Archive View (Prefix based)
+        return redirect()->route('rpcppe.index', ['folder' => strtoupper($prefix)])
+                         ->with('success', 'Record updated and moved to ' . $validated['classification']);
     }
 
-    /* ---------- DELETE ---------- */
-    public function destroy(int $id)
+    public function destroy(Request $request, int $id)
     {
-        Rpcppe::findOrFail($id)->delete();
-        return redirect()->route('rpcppe.index')->with('action', 'delete');
+        $item = Rpcppe::findOrFail($id);
+
+        if ($request->action_type === 'permanent') {
+            $item->delete();
+            return redirect()->route('rpcppe.index')->with('success', 'Record permanently deleted.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $rawDate = $item->date_acquired;
+            $formattedDate = null;
+
+            if (!empty($rawDate)) {
+                try {
+                    $formattedDate = Carbon::parse($rawDate)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    // Extract year if full date fails
+                    if (preg_match('/(\d{4})/', $rawDate, $matches)) {
+                        $formattedDate = $matches[1] . "-01-01";
+                    }
+                }
+            }
+
+            Disposable::create([
+                'property_number' => $item->property_no,
+                'name'            => $item->accountable_person ?? 'N/A',
+                'quantity'        => $item->quantity_per_physical_count ?? 0,
+                'description'     => $item->description,
+                'DateAcquired'    => $formattedDate,
+                'year'            => preg_replace('/[^0-9]/', '', $item->date_acquired) ?: date('Y'),
+                'WMR_num'         => 'WMR-' . now()->format('Ymd') . '-' . $item->id, 
+                'unit_value'      => $item->unit_value ?? 0,
+                'article'         => $item->article ?? 'N/A',
+            ]);
+
+            $item->delete(); 
+            DB::commit();
+            return redirect()->route('rpcppe.index')->with('success', 'Item moved to Disposal list.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Disposal Error: " . $e->getMessage());
+            return redirect()->back()->with('error', 'Database Error: ' . $e->getMessage());
+        }
     }
 
-    /* ---------- PDF REPORTS ---------- */
-    public function printTable()
+    public function printTable(Request $request)
     {
-        $items = Rpcppe::orderBy('id','desc')->get(); // ✅ keep same order
-        $pdf   = Pdf::loadView('rpcppe.reports.table', compact('items'))
-                    ->setPaper('a4', 'landscape');
+        set_time_limit(300); 
+        $items = $this->buildQuery($request)
+                      ->orderBy('property_no', 'asc')
+                      ->get();
+
+        $pdf = Pdf::loadView('rpcppe.reports.table', compact('items'))
+                  ->setPaper('a4', 'landscape');
+
         return $pdf->stream('rpcppe_table.pdf');
     }
 
-    public function appendix73()
+    public function appendix73(Request $request)
     {
-        $items = Rpcppe::orderBy('id','desc')->get();
-        $pdf   = Pdf::loadView('rpcppe.reports.appendix73', compact('items'))
-                    ->setPaper('legal', 'landscape');
+        set_time_limit(0); 
+        ini_set('memory_limit', '1G'); 
+        $items = $this->buildQuery($request)->orderBy('property_no', 'asc')->get();
+        $pdf = Pdf::loadView('rpcppe.reports.appendix73', compact('items'))
+                  ->setPaper('legal', 'landscape');
         return $pdf->stream('rpcppe_appendix73.pdf');
     }
 
-    public function printFilteredTable(Request $request)
+    public function exportExcel(Request $request)
     {
-        $items = $this->buildQuery($request)
-                      ->orderBy('id','desc')
-                      ->get();
-
-        $pdf   = Pdf::loadView('rpcppe.reports.table', compact('items'))
-                    ->setPaper('a4', 'landscape');
-        return $pdf->stream('rpcppe_filtered_table.pdf');
-    }
-
-    /* ---------- EXCEL EXPORTS ---------- */
-    public function exportExcel()
-    {
-        return Excel::download(new RpcppeExport, 'rpcppe.xlsx');
-    }
-
-    public function appendix73Export()
-    {
-        $templatePath = storage_path('app/templates/Appendix 73 - RPCPPE.xls');
-        if (!file_exists($templatePath)) {
-            abort(404, 'Template file not found at '.$templatePath);
+        $templatePath = storage_path('app/templates/Accountability_template.xlsx');
+        if (!file_exists($templatePath)) { 
+            return redirect()->back()->with('error', 'Excel template not found.'); 
         }
 
-        $spreadsheet = IOFactory::load($templatePath);
-        $sheet       = $spreadsheet->getActiveSheet();
-        $items       = Rpcppe::orderBy('id','desc')->get();
+        try {
+            $spreadsheet = IOFactory::load($templatePath);
+            $sheet = $spreadsheet->getActiveSheet();
 
-        // start row (adjust to match your template)
-        $row = 12;
-        foreach ($items as $item) {
-            $sheet->setCellValue("C{$row}", $item->article);
-            $sheet->setCellValue("D{$row}", $item->description);
-            $sheet->setCellValue("E{$row}", $item->property_no);
-            $sheet->setCellValue("F{$row}", $item->unit_of_measure);
-            $sheet->setCellValue("G{$row}", $item->unit_value);
-            $sheet->setCellValue("H{$row}", $item->quantity_per_property_card);
-            $sheet->setCellValue("I{$row}", $item->quantity_per_physical_count);
-            $sheet->setCellValue("J{$row}", $item->shortage_overage_qty.' / '.$item->shortage_overage_value);
-            $sheet->setCellValue("L{$row}", $item->remarks);
-            $row++;
+            $items = $request->has('all') 
+                ? Rpcppe::orderBy('property_no', 'asc')->get() 
+                : $this->buildQuery($request)->orderBy('property_no', 'asc')->get();
+
+            if ($items->isEmpty()) {
+                return redirect()->back()->with('error', 'No records found to export.');
+            }
+
+            $row = 16; 
+            foreach ($items as $item) {
+                $sheet->setCellValue("A{$row}", $item->article);
+                $sheet->setCellValue("B{$row}", $item->description);
+                $sheet->setCellValue("C{$row}", $item->property_no);
+                $sheet->setCellValue("D{$row}", $item->classification); // Idinagdag ang Classification column
+                $sheet->setCellValue("E{$row}", $item->unit_of_measure);
+                $sheet->setCellValue("F{$row}", $item->unit_value);
+                $sheet->setCellValue("G{$row}", $item->quantity_per_property_card);
+                $sheet->setCellValue("H{$row}", $item->quantity_per_physical_count);
+                $sheet->setCellValue("I{$row}", $item->shortage_overage_qty);
+                $sheet->setCellValue("J{$row}", $item->shortage_overage_value);
+                $sheet->setCellValue("K{$row}", $item->remarks);
+                $sheet->setCellValue("L{$row}", $item->date_acquired);
+                $sheet->setCellValue("M{$row}", $item->accountable_person);
+                $sheet->setCellValue("N{$row}", $item->location);
+                $sheet->setCellValue("O{$row}", $item->division);
+                $sheet->setCellValue("P{$row}", $item->section_unit);
+
+                $sheet->getStyle("A{$row}:P{$row}")->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+                $row++;
+            }
+
+            $fileName = 'RPCPPE_Export_' . now()->format('Y-m-d') . '.xlsx';
+            $writer = new Xlsx($spreadsheet);
+            
+            if (ob_get_contents()) ob_end_clean();
+            return response()->streamDownload(function() use ($writer) { 
+                $writer->save('php://output'); 
+            }, $fileName);
+
+        } catch (\Exception $e) {
+            Log::error('Excel Export Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Export failed: ' . $e->getMessage());
         }
+    }
 
-        $writer   = new Xls($spreadsheet);   // switch to Xlsx if needed
-        $fileName = 'Appendix_73_Report.xls';
-
-        return response()->streamDownload(function () use ($writer) {
-            $writer->save('php://output');
-        }, $fileName, [
-            'Content-Type'        => 'application/vnd.ms-excel',
-            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
-        ]);
+    public function importExcel(Request $request)
+    {
+        $request->validate(['file' => 'required|mimes:xlsx,xls']);
+        try {
+            Excel::import(new RpcppeImport, $request->file('file'));
+            return redirect()->route('rpcppe.index')->with('success', 'Data imported successfully!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Import Error: ' . $e->getMessage());
+        }
     }
 }
