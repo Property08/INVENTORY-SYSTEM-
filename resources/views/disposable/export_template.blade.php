@@ -48,11 +48,13 @@
         </thead>
         <tbody>
             @foreach($disposables as $item)
-                <tr>
+                 <tr>
                     <td style="text-align: left;">{{ $item->property_number }}</td>
-                    <td style="text-align: left; font-style: italic;">{{ $item->description }}</td>
                     <td style="text-align: center;">{{ $item->quantity }}</td>
-                    <td style="text-align: left;">{{ strtoupper($item->name) }}</td>
+                    <td style="text-align: right;">{{ number_format($item->unit_value, 2) }}</td>
+                    <td style="text-align: left;">{{ strtoupper($item->article) }}</td>
+                    <td style="text-align: left; font-style: italic;">{{ $item->description }}</td>
+                    <td style="text-align: left;">{{ strtoupper($item->accountability_name) }}</td>      
                     <td style="text-align: center;">
                         {{ $item->DateAcquired ? \Carbon\Carbon::parse($item->DateAcquired)->format('m/d/Y') : '-' }}
                     </td>
