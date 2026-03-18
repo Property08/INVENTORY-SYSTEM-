@@ -54,7 +54,7 @@
                     <td style="text-align: right;">{{ number_format($item->unit_value, 2) }}</td>
                     <td style="text-align: left;">{{ strtoupper($item->article) }}</td>
                     <td style="text-align: left; font-style: italic;">{{ $item->description }}</td>
-                    <td style="text-align: left;">{{ strtoupper($item->accountability_name) }}</td>      
+                     <td class="px-6 py-4 text-xs font-bold text-slate-800 uppercase">{{ $item->name }}</td>   
                     <td style="text-align: center;">
                         {{ $item->DateAcquired ? \Carbon\Carbon::parse($item->DateAcquired)->format('m/d/Y') : '-' }}
                     </td>
