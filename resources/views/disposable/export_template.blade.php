@@ -34,15 +34,15 @@
 
     <table>
         <thead>
-            <tr>
+           <tr>
                 <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 100px;">Property Num.</th>
-                <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 150px;">Article</th>
-                <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 250px;">Description</th>
                 <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 50px;">QTY</th>
                 <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 150px;">Unit Value</th>
+                <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 150px;">Article</th>
+                <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 250px;">Description</th>
                 <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 150px;">Accountability Name</th>
                 <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 100px;">Date Acquired</th>
-                 <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 100px;">Year Disposed</th>
+                <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 100px;">Year Disposed</th>
                 <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 100px;">WMR Num.</th>
             </tr>
         </thead>
