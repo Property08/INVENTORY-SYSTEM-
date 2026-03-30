@@ -60,10 +60,13 @@ class RpcppeController extends Controller
         if ($request->filled('date_acquired')) {
             $query->where('date_acquired', 'like', "%{$request->date_acquired}%");
         }
-        if ($request->filled('person')) {
-            $query->where(function($q) use ($request) {
-                $q->where('accountable_person', 'like', "%{$request->person}%")
-                  ->orWhere('transfer_to', 'like', "%{$request->person}%");
+        if ($request->filled('search_general')) {
+    $search = $request->search_general;
+    
+       $query->where(function($q) use ($search) {
+        $q->where('accountable_person', 'LIKE', "%{$search}%")
+          ->orWhere('transfer_to', 'LIKE', "%{$search}%")
+          ->orWhere('remarks', 'LIKE', "%{$search}%");
             });
         }
         if ($request->filled('location')) {
@@ -77,6 +80,7 @@ class RpcppeController extends Controller
         }
 
         return $query;
+    }
     }
 
     public function index(Request $request)
