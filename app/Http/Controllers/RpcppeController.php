@@ -60,15 +60,17 @@ class RpcppeController extends Controller
         if ($request->filled('date_acquired')) {
             $query->where('date_acquired', 'like', "%{$request->date_acquired}%");
         }
+
+        // GENERAL SEARCH (People / Remarks)
         if ($request->filled('search_general')) {
-    $search = $request->search_general;
-    
-       $query->where(function($q) use ($search) {
-        $q->where('accountable_person', 'LIKE', "%{$search}%")
-          ->orWhere('transfer_to', 'LIKE', "%{$search}%")
-          ->orWhere('remarks', 'LIKE', "%{$search}%");
+            $search = $request->search_general;
+            $query->where(function($q) use ($search) {
+                $q->where('accountable_person', 'LIKE', "%{$search}%")
+                  ->orWhere('transfer_to', 'LIKE', "%{$search}%")
+                  ->orWhere('remarks', 'LIKE', "%{$search}%");
             });
         }
+
         if ($request->filled('location')) {
             $query->where('location', 'LIKE', '%' . $request->location . '%');
         }
