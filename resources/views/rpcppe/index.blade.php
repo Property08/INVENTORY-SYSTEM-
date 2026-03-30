@@ -94,8 +94,8 @@
                        class="w-full border-slate-300 rounded text-xs py-2 px-3 focus:ring-1 focus:ring-slate-400" placeholder="Year or Full Date">
             </div>
 
-           <div class="lg:col-span-2">
-            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Search People / Remarks</label>
+          <div class="lg:col-span-2">
+            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Accountable, Transfer to: / Remarks</label>
             <input type="text" name="search_general" value="{{ request('search_general') }}" list="name_suggestions" 
                 class="w-full border-slate-300 rounded text-xs py-2 px-3 focus:ring-1 focus:ring-slate-400" 
                 placeholder="Name or Remarks...">
@@ -104,7 +104,7 @@
                     <option value="{{ $name }}"></option>
                 @endforeach
             </datalist>
-           </div>
+        </div>
             
             <div>
                 <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Location</label>
