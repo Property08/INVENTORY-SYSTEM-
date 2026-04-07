@@ -34,7 +34,7 @@ class RpcppeController extends Controller
             '223' => 'INFORMATION AND COMM. TECH. EQUIPMENT', 
             '229' => 'COMMUNICATION EQUIPMENT',
             '250' => 'HANDS TOOL', 
-            '255D' => 'INDUSTRIAL MACHINES & IMPLEMENTS', 
+            '255' => 'INDUSTRIAL MACHINES & IMPLEMENTS', 
             '254' => 'ARTESIAN WELLS',
             '222' => 'OFFICE FURNITURES', 
             '10605120' => 'PRINTING EQUIPMENT', 
@@ -42,6 +42,8 @@ class RpcppeController extends Controller
             '10603060' => 'COMMUNICATION NETWORK', 
             'HV' => 'SEMI-EXPENDABLE (High Value)', 
             'LV' => 'SEMI-EXPENDABLE (Low Value)',
+            '218' => 'DONATION JICA',
+            'GIA-13 ' => 'GIA',
         ];
 
         return $mapping[$prefix] ?? 'OTHERS';
@@ -58,14 +60,19 @@ class RpcppeController extends Controller
             $query->where('property_no', 'like', "%{$request->property_no}%");
         }
         if ($request->filled('date_acquired')) {
-            $query->where('date_acquired', 'like', "%{$request->date_acquired}%");
+            
         }
-        if ($request->filled('person')) {
-            $query->where(function($q) use ($request) {
-                $q->where('accountable_person', 'like', "%{$request->person}%")
-                  ->orWhere('transfer_to', 'like', "%{$request->person}%");
+
+        // GENERAL SEARCH (People / Remarks)
+        if ($request->filled('search_general')) {
+            $search = $request->search_general;
+            $query->where(function($q) use ($search) {
+                $q->where('accountable_person', 'LIKE', "%{$search}%")
+                  ->orWhere('transfer_to', 'LIKE', "%{$search}%")
+                  ->orWhere('remarks', 'LIKE', "%{$search}%");
             });
         }
+
         if ($request->filled('location')) {
             $query->where('location', 'LIKE', '%' . $request->location . '%');
         }
@@ -83,15 +90,18 @@ class RpcppeController extends Controller
     {
         $allPropertyNumbers = Rpcppe::distinct()->pluck('property_no')->sort();
         $locations = Rpcppe::whereNotNull('location')->distinct()->pluck('location')->sort();
+        
+        // Pinagsamang listahan para sa datalist suggestions
         $names1 = Rpcppe::whereNotNull('accountable_person')->distinct()->pluck('accountable_person');
         $names2 = Rpcppe::whereNotNull('transfer_to')->distinct()->pluck('transfer_to');
         $allNames = $names1->merge($names2)->unique()->sort();
         
+        // Dito natin tinatawag ang buildQuery
         $items = $this->buildQuery($request)
                     ->orderBy('property_no', 'asc')
                     ->orderBy('date_acquired', 'desc')
                     ->paginate(50) 
-                    ->withQueryString();
+                    ->withQueryString(); // Importante ito para hindi mawala ang search filter paglipat ng page
 
         return view('rpcppe.index', compact('items', 'locations', 'allNames', 'allPropertyNumbers'));
     }

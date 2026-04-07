@@ -172,11 +172,7 @@
                 <div class="mt-4">{{ $inventoryItems->links() }}</div>
             </div>
         @else
-            <div class="flex flex-col items-center justify-center py-32 bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[3rem]">
-                <span class="text-8xl opacity-20 mb-6">📂</span>
-                <h3 class="text-2xl font-black text-slate-800">Filing Cabinet Locked</h3>
-                <p class="text-slate-400 mt-2">Select an account code above to unlock records.</p>
-            </div>
+            
         @endif
     </div>
 </div>
