@@ -34,7 +34,7 @@
 
     <table>
         <thead>
-            <tr>
+           <tr>
                 <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 100px;">Property Num.</th>
                 <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 50px;">QTY</th>
                 <th style="background-color: #0070c0; color: #ffffff; font-weight: bold; border: 1px solid #000000; text-align: center; width: 150px;">Unit Value</th>
@@ -48,13 +48,17 @@
         </thead>
         <tbody>
             @foreach($disposables as $item)
-                <tr>
+                 <tr>
                     <td style="text-align: left;">{{ $item->property_number }}</td>
                     <td style="text-align: center;">{{ $item->quantity }}</td>
                     <td style="text-align: right;">{{ number_format($item->unit_value, 2) }}</td>
                     <td style="text-align: left;">{{ strtoupper($item->article) }}</td>
                     <td style="text-align: left; font-style: italic;">{{ $item->description }}</td>
+<<<<<<< HEAD
                     <td class="px-6 py-4 text-xs font-bold text-slate-800 uppercase">{{ $item->name }}</td>  
+=======
+                     <td class="px-6 py-4 text-xs font-bold text-slate-800 uppercase">{{ $item->name }}</td>   
+>>>>>>> 51fd2ce43c477f5865c06381c3e2f5cffe3e9810
                     <td style="text-align: center;">
                         {{ $item->DateAcquired ? \Carbon\Carbon::parse($item->DateAcquired)->format('m/d/Y') : '-' }}
                     </td>

@@ -85,6 +85,7 @@ class RpcppeController extends Controller
 
         return $query;
     }
+    }
 
     public function index(Request $request)
     {
