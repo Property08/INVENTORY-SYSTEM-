@@ -31,7 +31,7 @@
         <div class="px-8 py-10 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <div class="p-2 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
-                    <img src="{{ asset('storage/logo_outline.png') }}" alt="Logo" class="w-10 h-10 object-contain">
+                    <img src="{{ asset('assets/image/logo_outline.png') }}" alt="Logo" class="w-10 h-10 object-contain">
                 </div>
                 <div>
                     <h1 class="text-white text-sm font-black tracking-tighter uppercase leading-none">Inventory</h1>

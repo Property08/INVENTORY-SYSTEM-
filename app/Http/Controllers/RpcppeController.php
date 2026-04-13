@@ -83,8 +83,12 @@ class RpcppeController extends Controller
             $query->where('description', 'like', "%{$request->description}%");
         }
 
+        if ($request->filled('date_acquired')) {
+            $query->where('date_acquired', 'LIKE', '%' . $request->date_acquired . '%');
+        }
+
         return $query;
-    }
+    
     }
 
     public function index(Request $request)

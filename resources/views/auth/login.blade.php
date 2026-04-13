@@ -12,8 +12,7 @@
             
             <div class="flex flex-col items-center mb-10">
                 <div class="p-4 bg-white shadow-sm rounded-2xl mb-6">
-                    <img src="{{ asset('storage/logo_outline.png') }}" 
-                         class="w-12 h-12 object-contain" alt="Logo">
+                    <img src="{{ asset('assets/image/logo_outline.png') }}" alt="Logo" class="w-10 h-10 object-contain">
                 </div>
                 <h2 class="text-3xl font-bold text-slate-900 tracking-tight">
                     Welcome back
