@@ -47,7 +47,7 @@ class RecordController extends Controller
             'HV' => 'SEMI-EXPENDABLE (High Value)', 
             'LV' => 'SEMI-EXPENDABLE (Low Value)',
             '218' => 'DONATION JICA',
-            'GIA-13 ' => 'GIA',
+            'GIA-13' => 'GIA',
              // Add more mappings as needed
         ];
     }
@@ -57,7 +57,7 @@ class RecordController extends Controller
      */
     public function index(Request $request)
     {
-        // Kunin ang lahat ng yearly records
+        // Kunin ang lahat ng yearly records para sa "Yearly Recaps" tab
         $records = Record::with('recaps')->orderBy('year', 'desc')->get();
 
         foreach ($records as $record) {
@@ -76,8 +76,12 @@ class RecordController extends Controller
         // Mapping ng Labels
         $mapping = $this->getAssetMapping();
 
-        // QUERY PARA SA FOLDERS
-        $rawFolders = Rpcppe::selectRaw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) as prefix, COUNT(*) as total")
+        // QUERY PARA SA FOLDERS (With total count and total value)
+        $rawFolders = Rpcppe::selectRaw("
+                UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) as prefix, 
+                COUNT(*) as total,
+                SUM(unit_value) as total_amount
+            ")
             ->groupBy(DB::raw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1)))"))
             ->orderBy('prefix')
             ->get();
@@ -88,7 +92,7 @@ class RecordController extends Controller
             return $f;
         });
 
-        // QUERY PARA SA ITEMS
+        // QUERY PARA SA ITEMS (Para sa loob ng folder kapag binuksan)
         $query = Rpcppe::query();
         if ($request->filled('folder')) {
             $query->whereRaw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) = ?", [$request->folder]);

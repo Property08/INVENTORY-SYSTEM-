@@ -28,7 +28,7 @@ class RpcppeImport implements ToModel, WithStartRow
             '241' => 'MOTOR VEHICLES', 
             '236' => 'TECHNICAL & SCIENTIFIC', 
             '240' => 'OTHER MACHINERIES',
-            '223' => 'ICT EQUIPMENT', 
+            '223' => 'Information Technology Equipment', 
             '229' => 'COMMUNICATION EQUIPMENT', 
             'HV'  => 'SEMI-EXPENDABLE (HV)',
             'LV'  => 'SEMI-EXPENDABLE (LV)',
@@ -72,18 +72,18 @@ class RpcppeImport implements ToModel, WithStartRow
     $value = trim($value);
 
     try {
-        // 1. Check kung 4-digit year lang (e.g., 2000, 2024)
-        // Gumamit ng ctype_digit para masiguro na pure numbers lang
+        
+        // 1. Kapag Year Only (e.g., "2023")
         if (ctype_digit((string)$value) && strlen((string)$value) === 4) {
             return $value . '-01-01'; 
         }
 
-        // 2. Kapag Excel Serial Number (e.g., 45123)
+        
         if (is_numeric($value)) {
             return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value)->format('Y-m-d');
         }
 
-        // 3. Kapag String date format (e.g., "October 12, 2023" o "2023/12/31")
+        
         return Carbon::parse($value)->format('Y-m-d');
         
     } catch (\Exception $e) {

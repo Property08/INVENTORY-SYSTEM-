@@ -81,19 +81,32 @@
                     <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Select a Folder to Open</h3>
                 </div>
                 @foreach($folders as $f)
-            <a href="?folder={{ $f->prefix }}&tab=cabinet#section-cabinet" 
-            class="group flex items-center gap-4 p-5 bg-white border border-slate-200 rounded-3xl hover:border-blue-500 hover:shadow-xl transition-all">
-                <span class="text-3xl">📁</span>
-                <div class="flex flex-col">
-                    <span class="text-[10px] font-black text-slate-400">CODE {{ $f->prefix }}</span>
-                    <span class="text-xs font-black text-slate-700 uppercase group-hover:text-blue-600">
-                        {{ $f->label }}
-                    </span>
-                    <span class="text-[10px] text-blue-500 font-bold">{{ number_format($f->total) }} Records</span>
-             </div>
-            </a>
-            @endforeach
+                    <a href="?folder={{ $f->prefix }}&tab=cabinet#section-cabinet" 
+                    class="group flex items-center gap-4 p-5 bg-white border border-slate-200 rounded-3xl hover:border-blue-500 hover:shadow-xl transition-all min-w-[280px]">
+                        
+                        <span class="text-3xl transition-transform group-hover:scale-110">📁</span>
+                        
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-400 tracking-wider">CODE {{ $f->prefix }}</span>
+                            
+                            <span class="text-xs font-black text-slate-700 uppercase group-hover:text-blue-600 leading-tight mb-1">
+                                {{ $f->label }}
+                            </span>
+                            
+                            {{-- Eto yung hiningi mong style --}}
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] text-blue-500 font-bold">
+                                    {{ number_format($f->total) }} Records
+                                </span>
+                                <span class="text-slate-300 text-[10px]">|</span>
+                                <span class="text-[10px] text-slate-600 font-bold">
+                                    ₱{{ number_format($f->total_amount, 2) }}
+                                </span>
+                            </div>
                         </div>
+                    </a>
+                    @endforeach
+                       </div>
                  @endif
 
         @if(request('folder'))
