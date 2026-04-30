@@ -20,7 +20,6 @@ class RecordController extends Controller
 {
     /**
      * PRIVATE HELPER: Mapping para sa Asset Labels
-     * Nilagay ko dito para hindi paulit-ulit ang code sa index at inventoryStorage.
      */
     private function getAssetMapping()
     {
@@ -48,7 +47,6 @@ class RecordController extends Controller
             'LV' => 'SEMI-EXPENDABLE (Low Value)',
             '218' => 'DONATION JICA',
             'GIA-13' => 'GIA',
-             // Add more mappings as needed
         ];
     }
 
@@ -57,7 +55,7 @@ class RecordController extends Controller
      */
     public function index(Request $request)
     {
-        // Kunin ang lahat ng yearly records para sa "Yearly Recaps" tab
+        // Yearly Records logic
         $records = Record::with('recaps')->orderBy('year', 'desc')->get();
 
         foreach ($records as $record) {
@@ -73,10 +71,9 @@ class RecordController extends Controller
             ];
         }
 
-        // Mapping ng Labels
         $mapping = $this->getAssetMapping();
 
-        // QUERY PARA SA FOLDERS (With total count and total value)
+        // Query folders
         $rawFolders = Rpcppe::selectRaw("
                 UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) as prefix, 
                 COUNT(*) as total,
@@ -86,13 +83,15 @@ class RecordController extends Controller
             ->orderBy('prefix')
             ->get();
 
-        // Idagdag ang label base sa mapping
+        // Apply mapping and FILTER OUT 'OTHER ASSETS'
         $folders = $rawFolders->map(function($f) use ($mapping) {
             $f->label = $mapping[$f->prefix] ?? 'OTHER ASSETS';
             return $f;
+        })->filter(function($f) {
+            return $f->label !== 'OTHER ASSETS';
         });
 
-        // QUERY PARA SA ITEMS (Para sa loob ng folder kapag binuksan)
+        // Items logic
         $query = Rpcppe::query();
         if ($request->filled('folder')) {
             $query->whereRaw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) = ?", [$request->folder]);
@@ -104,7 +103,7 @@ class RecordController extends Controller
     }
 
     /**
-     * 2. EXPORT FOLDER TO EXCEL (With Template)
+     * 2. EXPORT FOLDER TO EXCEL
      */
     public function exportFolder(Request $request)
     {
@@ -128,11 +127,10 @@ class RecordController extends Controller
                 return redirect()->back()->with('error', 'Walang data na makita para sa folder: ' . $folderName);
             }
 
-            // Load Template
             $spreadsheet = IOFactory::load($templatePath);
             $sheet = $spreadsheet->getActiveSheet();
 
-            $row = 16; // Start row sa template
+            $row = 16; 
             foreach ($items as $item) {
                 $sheet->setCellValue("A{$row}", $item->article);
                 $sheet->setCellValue("B{$row}", $item->description);
@@ -144,17 +142,13 @@ class RecordController extends Controller
                 $sheet->setCellValue("H{$row}", $item->shortage_overage_qty);
                 $sheet->setCellValue("I{$row}", $item->shortage_overage_value);
                 $sheet->setCellValue("J{$row}", $item->remarks);
-
-                // Optional/Extra Columns
                 $sheet->setCellValue("K{$row}", $item->date_acquired);
                 $sheet->setCellValue("L{$row}", $item->accountable_person);
                 $sheet->setCellValue("M{$row}", $item->location);
                 $sheet->setCellValue("N{$row}", $item->division);
                 $sheet->setCellValue("O{$row}", $item->section_unit);
 
-                // Apply Borders
                 $sheet->getStyle("A{$row}:P{$row}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-                
                 $row++;
             }
 
@@ -185,9 +179,12 @@ class RecordController extends Controller
             ->orderBy('prefix')
             ->get();
 
+        // Apply mapping and FILTER OUT 'OTHER ASSETS'
         $folders = $rawFolders->map(function($f) use ($mapping) {
             $f->label = $mapping[$f->prefix] ?? 'OTHER ASSETS';
             return $f;
+        })->filter(function($f) {
+            return $f->label !== 'OTHER ASSETS';
         });
 
         $items = null;
@@ -209,7 +206,7 @@ class RecordController extends Controller
     }
 
     /**
-     * 4. GENERATE PDF (Yearly Recap)
+     * 4. GENERATE PDF
      */
     public function pdf(Record $record)
     {
