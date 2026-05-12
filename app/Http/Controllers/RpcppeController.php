@@ -260,60 +260,91 @@ class RpcppeController extends Controller
     }
 
     public function exportExcel(Request $request)
-    {
-        $templatePath = storage_path('app/templates/Accountability_template.xlsx');
-        if (!file_exists($templatePath)) { 
-            return redirect()->back()->with('error', 'Excel template not found.'); 
-        }
-
-        try {
-            $spreadsheet = IOFactory::load($templatePath);
-            $sheet = $spreadsheet->getActiveSheet();
-
-            $items = $request->has('all') 
-                ? Rpcppe::orderBy('property_no', 'asc')->get() 
-                : $this->buildQuery($request)->orderBy('property_no', 'asc')->get();
-
-            if ($items->isEmpty()) {
-                return redirect()->back()->with('error', 'No records found to export.');
-            }
-
-            $row = 16; 
-            foreach ($items as $item) {
-                $sheet->setCellValue("A{$row}", $item->article);
-                $sheet->setCellValue("B{$row}", $item->description);
-                $sheet->setCellValue("C{$row}", $item->property_no);
-                $sheet->setCellValue("D{$row}", $item->classification); // Idinagdag ang Classification column
-                $sheet->setCellValue("E{$row}", $item->unit_of_measure);
-                $sheet->setCellValue("F{$row}", $item->unit_value);
-                $sheet->setCellValue("G{$row}", $item->quantity_per_property_card);
-                $sheet->setCellValue("H{$row}", $item->quantity_per_physical_count);
-                $sheet->setCellValue("I{$row}", $item->shortage_overage_qty);
-                $sheet->setCellValue("J{$row}", $item->shortage_overage_value);
-                $sheet->setCellValue("K{$row}", $item->remarks);
-                $sheet->setCellValue("L{$row}", $item->date_acquired);
-                $sheet->setCellValue("M{$row}", $item->accountable_person);
-                $sheet->setCellValue("N{$row}", $item->location);
-                $sheet->setCellValue("O{$row}", $item->division);
-                $sheet->setCellValue("P{$row}", $item->section_unit);
-
-                $sheet->getStyle("A{$row}:P{$row}")->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-                $row++;
-            }
-
-            $fileName = 'RPCPPE_Export_' . now()->format('Y-m-d') . '.xlsx';
-            $writer = new Xlsx($spreadsheet);
-            
-            if (ob_get_contents()) ob_end_clean();
-            return response()->streamDownload(function() use ($writer) { 
-                $writer->save('php://output'); 
-            }, $fileName);
-
-        } catch (\Exception $e) {
-            Log::error('Excel Export Error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Export failed: ' . $e->getMessage());
-        }
+{
+    $templatePath = storage_path('app/templates/Accountability_template.xlsx');
+    if (!file_exists($templatePath)) { 
+        return redirect()->back()->with('error', 'Excel template not found.'); 
     }
+
+    try {
+        $spreadsheet = IOFactory::load($templatePath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $items = $request->has('all') 
+            ? Rpcppe::orderBy('property_no', 'asc')->get() 
+            : $this->buildQuery($request)->orderBy('property_no', 'asc')->get();
+
+        if ($items->isEmpty()) {
+            return redirect()->back()->with('error', 'No records found to export.');
+        }
+
+        $row = 16; // Magsisimula sa row 16 base sa template
+        foreach ($items as $item) {
+            // Column A: Article (1)
+            $sheet->setCellValue("A{$row}", $item->article);
+            
+            // Column B: Description (2)
+            $sheet->setCellValue("B{$row}", $item->description);
+            
+            // Column C: Property Number (3)
+            $sheet->setCellValue("C{$row}", $item->property_no);
+            
+            // Column D: Unit of Measure (4) - IMPORTANTE: Huwag i-skip ang D
+            $sheet->setCellValue("D{$row}", $item->unit_of_measure);
+            
+            // Column E: Unit Value (5)
+            $sheet->setCellValue("E{$row}", $item->unit_value);
+            
+            // Column F: Per Card (6)
+            $sheet->setCellValue("F{$row}", $item->quantity_per_property_card);
+            
+            // Column G: Per Count (7)
+            $sheet->setCellValue("G{$row}", $item->quantity_per_physical_count);
+            
+            // Column H: Shortage/Overage Qty (8)
+            $sheet->setCellValue("H{$row}", $item->shortage_overage_qty);
+            
+            // Column I: Shortage/Overage Value (9)
+            $sheet->setCellValue("I{$row}", $item->shortage_overage_value);
+            
+            // Column J: Remarks (10)
+            $sheet->setCellValue("J{$row}", $item->remarks);
+            
+            // Column K: Date Acquired
+            $sheet->setCellValue("K{$row}", $item->date_acquired);
+            
+            // Column L: Accountable Person
+            $sheet->setCellValue("L{$row}", $item->accountable_person);
+            
+            // Column M: Transfer To
+            $sheet->setCellValue("M{$row}", $item->transfer_to);
+            
+            // Column N: Location
+            $sheet->setCellValue("N{$row}", $item->location);
+            // Column O: Division
+            $sheet->setCellValue("O{$row}", $item->division);
+            // Column P: Section/Unit
+            $sheet->setCellValue("P{$row}", $item->section_unit);
+
+            // Lagyan ng borders ang row (A hanggang P)
+            $sheet->getStyle("A{$row}:P{$row}")->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+            
+            $row++;
+        }
+
+        $fileName = 'RPCPPE_Export_' . now()->format('Y-m-d') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        
+        if (ob_get_contents()) ob_end_clean();
+        return response()->streamDownload(function() use ($writer) { 
+            $writer->save('php://output'); 
+        }, $fileName);
+
+    } catch (\Exception $e) {
+        Log::error('Excel Export Error: ' . $e->getMessage());
+        return redirect()->back()->with('error', 'Export failed: ' . $e->getMessage());
+    }
+}
 
     public function importExcel(Request $request)
     {

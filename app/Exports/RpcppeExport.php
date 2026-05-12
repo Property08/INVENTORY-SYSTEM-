@@ -56,7 +56,7 @@ class RpcppeExport implements FromCollection, WithMapping, WithEvents, WithCusto
     {
         return [
             BeforeExport::class => function(BeforeExport $event) {
-                // SIGURADUHIN NA TAMA ANG PATH NG TEMPLATE MO
+              
                 $templatePath = storage_path('app/templates/Accountability_template.xlsx');
                 
                 if (file_exists($templatePath)) {
