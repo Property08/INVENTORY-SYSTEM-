@@ -12,7 +12,7 @@
             
             <div class="flex flex-col items-center mb-8">
                 <div class="p-3 bg-white shadow-sm rounded-2xl mb-4 border border-slate-100">
-                    <img src="{{ asset('storage/logo_outline.png') }}" class="w-10 h-10 object-contain" alt="Logo">
+                   <img src="{{ asset('assets/image/logo_outline.png') }}" alt="Logo" class="w-10 h-10 object-contain">
                 </div>
                 <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight text-center">
                     Create Account
@@ -69,8 +69,11 @@
 
                 <button type="button"
                     class="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 py-3.5 rounded-2xl hover:bg-slate-50 transition-all">
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5">
-                    <span class="text-slate-700 font-bold text-sm">Google</span>
+                   <a href="{{ url('auth/google') }}"
+                class="w-full flex items-center justify-center gap-2.5 bg-white border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50 transition-all text-sm font-medium text-slate-700 shadow-sm active:scale-[0.99]">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-4 h-4" alt="Google Icon">
+                <span>Google</span>
+            </a>
                 </button>
             </form>
 

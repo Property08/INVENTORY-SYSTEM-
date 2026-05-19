@@ -140,7 +140,7 @@
 
         <footer class="p-6 sm:p-8 text-center border-t border-slate-100 bg-white/50 mt-auto">
             <p class="text-[9px] sm:text-[10px] font-bold text-slate-900 uppercase tracking-[0.2em] sm:tracking-[0.3em]">
-                &copy; 2026 Inventory Management System • Property Section (JAM)
+                &copy; 2026 Inventory Management System • Property Section 
             </p>
         </footer>
     </main>
