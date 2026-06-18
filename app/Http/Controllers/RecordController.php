@@ -5,16 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Record;
 use App\Models\Rpcppe;
 use App\Exports\RecordExport;
+use App\Exports\FolderExport; 
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-
-// PhpSpreadsheet Imports
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class RecordController extends Controller
 {
@@ -55,116 +51,93 @@ class RecordController extends Controller
      */
     public function index(Request $request)
     {
-        // Yearly Records logic
-        $records = Record::with('recaps')->orderBy('year', 'desc')->get();
+        // 1. Kunin ang mga available na taon para sa filter dropdown (distinct years mula sa date_acquired ng Rpcppe)
+        $availableYears = Rpcppe::selectRaw('YEAR(date_acquired) as year')
+            ->whereNotNull('date_acquired')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
 
-        foreach ($records as $record) {
-            $record->totals = [
-                'beginning'    => $record->recaps->sum('beginning_balance'),
-                'purchases'    => $record->recaps->sum('purchases'),
-                'reclass_from' => $record->recaps->sum('reclass_from'),
-                'reclass_to'   => $record->recaps->sum('reclass_to'),
-                'disposed'     => $record->recaps->sum('disposed'),
-                'donated'      => $record->recaps->sum('donated'),
-                'adjustments'  => $record->recaps->sum('adjustments'),
-                'total'        => $record->recaps->sum('total_as_of'),
-            ];
+        // 2. Kunin ang napiling taon mula sa request para magamit sa filtering at export logic (Kung walang pinili, magiging null o empty string ito)
+        $selectedYear = $request->input('year'); 
+
+        // 3. I-query ang folders base sa prefix/category
+        $foldersQuery = Rpcppe::selectRaw("
+                UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) as prefix,
+                COUNT(*) as total,
+                SUM(unit_value * quantity_per_physical_count) as total_amount
+            ")
+            ->whereRaw("property_no LIKE '%-%'");
+
+        if ($selectedYear) {
+            $foldersQuery->whereYear('date_acquired', $selectedYear);
         }
+
+        $foldersData = $foldersQuery->groupBy('prefix')->get();
 
         $mapping = $this->getAssetMapping();
 
-        // Query folders
-        $rawFolders = Rpcppe::selectRaw("
-                UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) as prefix, 
-                COUNT(*) as total,
-                SUM(unit_value) as total_amount
-            ")
-            ->groupBy(DB::raw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1)))"))
-            ->orderBy('prefix')
-            ->get();
-
-        // Apply mapping and FILTER OUT 'OTHER ASSETS'
-        $folders = $rawFolders->map(function($f) use ($mapping) {
-            $f->label = $mapping[$f->prefix] ?? 'OTHER ASSETS';
+        $folders = $foldersData->map(function($f) use ($mapping) {
+            $f->label = $mapping[$f->prefix] ?? 'OTHER PROPERTY, PLANT AND EQUIPMENT';
             return $f;
-        })->filter(function($f) {
-            return $f->label !== 'OTHER ASSETS';
         });
 
-        // Items logic
-        $query = Rpcppe::query();
-        if ($request->filled('folder')) {
-            $query->whereRaw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) = ?", [$request->folder]);
+        // 4. Kapag may piniling specific folder (Sub-view Inside Folder)
+        $inventoryItems = collect();
+        if ($request->has('folder')) {
+            $itemsQuery = Rpcppe::whereRaw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) = ?", [$request->input('folder')]);
+            
+            if ($selectedYear) {
+                $itemsQuery->whereYear('date_acquired', $selectedYear);
+            }
+            
+            $inventoryItems = $itemsQuery->orderBy('property_no')->paginate(15)->withQueryString();
         }
 
-        $inventoryItems = $query->orderBy('property_no')->paginate(15)->withQueryString();
+        // Kunin din ang pangkalahatang records para sa kabilang tab gamit ang Record Model mo
+        $records = Record::orderBy('year', 'desc')->get(); 
 
-        return view('records.index', compact('records', 'folders', 'inventoryItems'));
+        return view('records.index', compact('records', 'folders', 'availableYears', 'selectedYear', 'inventoryItems'));
     }
 
     /**
-     * 2. EXPORT FOLDER TO EXCEL
+     * 2. EXPORT FOLDER TO EXCEL (Tugma sa records.export_folder at records.export_filtered)
      */
     public function exportFolder(Request $request)
     {
-        $templatePath = storage_path('app/templates/Accountability_template.xlsx');
-        
-        if (!file_exists($templatePath)) { 
-            return redirect()->back()->with('error', 'Template not found at: ' . $templatePath); 
-        }
-
         try {
-            $folderName = $request->input('folder', 'All');
+            $folderName = $request->input('folder');
             
-            $query = Rpcppe::query();
-            if ($request->filled('folder')) {
-                $query->whereRaw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) = ?", [$folderName]);
+            // Ligtas na fallback: kung walang year filter, ipasa ang walang laman ('') para mag-consolidate ang Excel
+            $selectedYear = $request->input('year') ?: ''; 
+            
+            if (!$folderName) {
+                return redirect()->back()->with('error', 'No folder specified for export.');
             }
 
-            $items = $query->orderBy('property_no', 'asc')->get();
+            $mapping = $this->getAssetMapping();
 
-            if ($items->isEmpty()) {
-                return redirect()->back()->with('error', 'Walang data na makita para sa folder: ' . $folderName);
-            }
+            // Tinatawag ang FolderExport class gamit ang malinis na parameters
+            $exportClass = new FolderExport($folderName, $selectedYear, $mapping);
+            
+            // Nagbabago ang filename base sa kung may filter o consolidated ang download state
+            $yearLabel = $selectedYear ? '_FY' . $selectedYear : '_CONSOLIDATED';
+            $fileName = 'RPCPPE_Report_' . $folderName . $yearLabel . '_' . now()->format('Y-m-d') . '.xlsx';
 
-            $spreadsheet = IOFactory::load($templatePath);
-            $sheet = $spreadsheet->getActiveSheet();
-
-            $row = 16; 
-            foreach ($items as $item) {
-                $sheet->setCellValue("A{$row}", $item->article);
-                $sheet->setCellValue("B{$row}", $item->description);
-                $sheet->setCellValue("C{$row}", $item->property_no);
-                $sheet->setCellValue("D{$row}", $item->unit_of_measure);
-                $sheet->setCellValue("E{$row}", $item->unit_value);
-                $sheet->setCellValue("F{$row}", $item->quantity_per_property_card);
-                $sheet->setCellValue("G{$row}", $item->quantity_per_physical_count);
-                $sheet->setCellValue("H{$row}", $item->shortage_overage_qty);
-                $sheet->setCellValue("I{$row}", $item->shortage_overage_value);
-                $sheet->setCellValue("J{$row}", $item->remarks);
-                $sheet->setCellValue("K{$row}", $item->date_acquired);
-                $sheet->setCellValue("L{$row}", $item->accountable_person);
-                $sheet->setCellValue("M{$row}", $item->location);
-                $sheet->setCellValue("N{$row}", $item->division);
-                $sheet->setCellValue("O{$row}", $item->section_unit);
-
-                $sheet->getStyle("A{$row}:P{$row}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-                $row++;
-            }
-
-            $fileName = 'RPCPPE_Report_' . $folderName . '_' . now()->format('Y-m-d') . '.xlsx';
-            $writer = new Xlsx($spreadsheet);
-
-            if (ob_get_contents()) ob_end_clean();
-
-            return response()->streamDownload(function() use ($writer) { 
-                $writer->save('php://output'); 
-            }, $fileName);
+            return Excel::download($exportClass, $fileName);
 
         } catch (\Exception $e) {
             Log::error('Export Error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Error during export: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Alias method para sa export-filtered route para sumalo sa iisang download template logic
+     */
+    public function exportFiltered(Request $request)
+    {
+        return $this->exportFolder($request);
     }
 
     /**
@@ -175,11 +148,11 @@ class RecordController extends Controller
         $mapping = $this->getAssetMapping();
 
         $rawFolders = Rpcppe::selectRaw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) as prefix, COUNT(*) as total")
+            ->whereRaw("property_no LIKE '%-%'")
             ->groupBy(DB::raw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1)))"))
             ->orderBy('prefix')
             ->get();
 
-        // Apply mapping and FILTER OUT 'OTHER ASSETS'
         $folders = $rawFolders->map(function($f) use ($mapping) {
             $f->label = $mapping[$f->prefix] ?? 'OTHER ASSETS';
             return $f;
@@ -219,7 +192,9 @@ class RecordController extends Controller
      */
     public function excel(Record $record)
     {
-        return Excel::download(new RecordExport($record), 'record_' . $record->year . '.xlsx');
+        $record->load('recaps');
+        $fileName = 'Yearly_Recap_Report_' . $record->year . '_' . now()->format('Y-m-d') . '.xlsx';
+        return Excel::download(new RecordExport($record), $fileName);
     }
 
     /**

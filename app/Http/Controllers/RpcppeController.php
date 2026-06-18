@@ -59,9 +59,6 @@ class RpcppeController extends Controller
         if ($request->filled('property_no')) {
             $query->where('property_no', 'like', "%{$request->property_no}%");
         }
-        if ($request->filled('date_acquired')) {
-            
-        }
 
         // GENERAL SEARCH (People / Remarks)
         if ($request->filled('search_general')) {
@@ -88,7 +85,6 @@ class RpcppeController extends Controller
         }
 
         return $query;
-    
     }
 
     public function index(Request $request)
@@ -96,17 +92,15 @@ class RpcppeController extends Controller
         $allPropertyNumbers = Rpcppe::distinct()->pluck('property_no')->sort();
         $locations = Rpcppe::whereNotNull('location')->distinct()->pluck('location')->sort();
         
-        // Pinagsamang listahan para sa datalist suggestions
         $names1 = Rpcppe::whereNotNull('accountable_person')->distinct()->pluck('accountable_person');
         $names2 = Rpcppe::whereNotNull('transfer_to')->distinct()->pluck('transfer_to');
         $allNames = $names1->merge($names2)->unique()->sort();
         
-        // Dito natin tinatawag ang buildQuery
         $items = $this->buildQuery($request)
                     ->orderBy('property_no', 'asc')
                     ->orderBy('date_acquired', 'desc')
                     ->paginate(50) 
-                    ->withQueryString(); // Importante ito para hindi mawala ang search filter paglipat ng page
+                    ->withQueryString();
 
         return view('rpcppe.index', compact('items', 'locations', 'allNames', 'allPropertyNumbers'));
     }
@@ -140,7 +134,6 @@ class RpcppeController extends Controller
             'property_no.unique' => ' (' . $request->property_no . ') nauna nang nakarehistro.',
         ]);
 
-        // Smart Classification Logic
         $prefix = explode('-', $request->property_no)[0];
         $validated['classification'] = $this->getClassificationMapping($prefix);
 
@@ -174,17 +167,15 @@ class RpcppeController extends Controller
             'location' => 'nullable|string',
             'division' => 'nullable|string',
             'section_unit' => 'nullable|string',
-            'ptsd' => 'nullable|string', // Idinagdag para masave ang PTSD
-            'transfer_to' => 'nullable|string', // Idinagdag para masave ang Transfer_to
+            'ptsd' => 'nullable|string', 
+            'transfer_to' => 'nullable|string', 
         ]);
 
-        // Smart Re-classification Logic
         $prefix = explode('-', $request->property_no)[0];
         $validated['classification'] = $this->getClassificationMapping($prefix);
 
         $rpcppe->update($validated);
 
-        // Redirect pabalik sa Archive View (Prefix based)
         return redirect()->route('rpcppe.index', ['folder' => strtoupper($prefix)])
                          ->with('success', 'Record updated and moved to ' . $validated['classification']);
     }
@@ -207,7 +198,6 @@ class RpcppeController extends Controller
                 try {
                     $formattedDate = Carbon::parse($rawDate)->format('Y-m-d');
                 } catch (\Exception $e) {
-                    // Extract year if full date fails
                     if (preg_match('/(\d{4})/', $rawDate, $matches)) {
                         $formattedDate = $matches[1] . "-01-01";
                     }
@@ -239,13 +229,8 @@ class RpcppeController extends Controller
     public function printTable(Request $request)
     {
         set_time_limit(300); 
-        $items = $this->buildQuery($request)
-                      ->orderBy('property_no', 'asc')
-                      ->get();
-
-        $pdf = Pdf::loadView('rpcppe.reports.table', compact('items'))
-                  ->setPaper('a4', 'landscape');
-
+        $items = $this->buildQuery($request)->orderBy('property_no', 'asc')->get();
+        $pdf = Pdf::loadView('rpcppe.reports.table', compact('items'))->setPaper('a4', 'landscape');
         return $pdf->stream('rpcppe_table.pdf');
     }
 
@@ -254,97 +239,137 @@ class RpcppeController extends Controller
         set_time_limit(0); 
         ini_set('memory_limit', '1G'); 
         $items = $this->buildQuery($request)->orderBy('property_no', 'asc')->get();
-        $pdf = Pdf::loadView('rpcppe.reports.appendix73', compact('items'))
-                  ->setPaper('legal', 'landscape');
+        $pdf = Pdf::loadView('rpcppe.reports.appendix73', compact('items'))->setPaper('legal', 'landscape');
         return $pdf->stream('rpcppe_appendix73.pdf');
     }
 
-    public function exportExcel(Request $request)
-{
-    $templatePath = storage_path('app/templates/Accountability_template.xlsx');
-    if (!file_exists($templatePath)) { 
-        return redirect()->back()->with('error', 'Excel template not found.'); 
-    }
-
-    try {
-        $spreadsheet = IOFactory::load($templatePath);
-        $sheet = $spreadsheet->getActiveSheet();
-
-        $items = $request->has('all') 
-            ? Rpcppe::orderBy('property_no', 'asc')->get() 
-            : $this->buildQuery($request)->orderBy('property_no', 'asc')->get();
-
-        if ($items->isEmpty()) {
-            return redirect()->back()->with('error', 'No records found to export.');
-        }
-
-        $row = 16; // Magsisimula sa row 16 base sa template
-        foreach ($items as $item) {
-            // Column A: Article (1)
-            $sheet->setCellValue("A{$row}", $item->article);
-            
-            // Column B: Description (2)
-            $sheet->setCellValue("B{$row}", $item->description);
-            
-            // Column C: Property Number (3)
-            $sheet->setCellValue("C{$row}", $item->property_no);
-            
-            // Column D: Unit of Measure (4) - IMPORTANTE: Huwag i-skip ang D
-            $sheet->setCellValue("D{$row}", $item->unit_of_measure);
-            
-            // Column E: Unit Value (5)
-            $sheet->setCellValue("E{$row}", $item->unit_value);
-            
-            // Column F: Per Card (6)
-            $sheet->setCellValue("F{$row}", $item->quantity_per_property_card);
-            
-            // Column G: Per Count (7)
-            $sheet->setCellValue("G{$row}", $item->quantity_per_physical_count);
-            
-            // Column H: Shortage/Overage Qty (8)
-            $sheet->setCellValue("H{$row}", $item->shortage_overage_qty);
-            
-            // Column I: Shortage/Overage Value (9)
-            $sheet->setCellValue("I{$row}", $item->shortage_overage_value);
-            
-            // Column J: Remarks (10)
-            $sheet->setCellValue("J{$row}", $item->remarks);
-            
-            // Column K: Date Acquired
-            $sheet->setCellValue("K{$row}", $item->date_acquired);
-            
-            // Column L: Accountable Person
-            $sheet->setCellValue("L{$row}", $item->accountable_person);
-            
-            // Column M: Transfer To
-            $sheet->setCellValue("M{$row}", $item->transfer_to);
-            
-            // Column N: Location
-            $sheet->setCellValue("N{$row}", $item->location);
-            // Column O: Division
-            $sheet->setCellValue("O{$row}", $item->division);
-            // Column P: Section/Unit
-            $sheet->setCellValue("P{$row}", $item->section_unit);
-
-            // Lagyan ng borders ang row (A hanggang P)
-            $sheet->getStyle("A{$row}:P{$row}")->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-            
-            $row++;
-        }
-
-        $fileName = 'RPCPPE_Export_' . now()->format('Y-m-d') . '.xlsx';
-        $writer = new Xlsx($spreadsheet);
+    // 🏆 FIXED WITH TWISTS: DIREKTA SA TEMPLATE MO + SEARCH FILTER + COMBINED REMARKS
+    public function appendix73Export(Request $request)
+    {
+        $templatePath = storage_path('app/templates/Appendix73-RPCPPE..xlsx');
         
-        if (ob_get_contents()) ob_end_clean();
-        return response()->streamDownload(function() use ($writer) { 
-            $writer->save('php://output'); 
-        }, $fileName);
+        if (!file_exists($templatePath)) { 
+            return redirect()->back()->with('error', 'Excel template not found sa: storage/app/templates/Appendix73-RPCPPE..xlsx'); 
+        }
 
-    } catch (\Exception $e) {
-        Log::error('Excel Export Error: ' . $e->getMessage());
-        return redirect()->back()->with('error', 'Export failed: ' . $e->getMessage());
+        try {
+            $spreadsheet = IOFactory::load($templatePath);
+            $sheet = $spreadsheet->getActiveSheet();
+
+            // TWIST 2: Sumusunod sa kung ano lang ang aktwal na hinahanap sa search fields
+            $items = $this->buildQuery($request)->orderBy('property_no', 'asc')->get();
+
+            if ($items->isEmpty()) {
+                return redirect()->back()->with('error', 'Walang nahanap na records base sa iyong search para i-export.');
+            }
+
+            $row = 16; 
+            foreach ($items as $item) {
+                // Column C to I: Standard cells
+               $sheet->setCellValue("C{$row}", $item->article);
+                $sheet->setCellValue("D{$row}", $item->description);
+                $sheet->setCellValue("E{$row}", $item->property_no);
+                $sheet->setCellValue("F{$row}", $item->unit_of_measure);
+                $sheet->setCellValue("G{$row}", $item->unit_value);
+                $sheet->setCellValue("H{$row}", $item->quantity_per_property_card);
+                $sheet->setCellValue("I{$row}", $item->quantity_per_physical_count);
+
+                // HIWALAY NA COLUMN PARA SA QTY AT VALUE (Para hindi mag-overlap)
+                $sheet->setCellValue("J{$row}", $item->shortage_overage_qty);
+                $sheet->setCellValue("K{$row}", $item->shortage_overage_value);
+
+                // TWIST 1: Ilagay ang pinagsamang extra details sa Column L (Remarks)
+                $extraDetails = [];
+                if (!empty($item->date_acquired))      $extraDetails[] = "Date: " . $item->date_acquired;
+                if (!empty($item->location))           $extraDetails[] = "Loc: " . $item->location;
+                if (!empty($item->accountable_person)) $extraDetails[] = "Acct Person: " . $item->accountable_person;
+                if (!empty($item->division))           $extraDetails[] = "Div: " . $item->division;
+                if (!empty($item->section_unit))       $extraDetails[] = "Sec: " . $item->section_unit;
+                if (!empty($item->remarks))            $extraDetails[] = "Remarks: " . $item->remarks;
+
+                $combinedRemarks = implode(' | ', $extraDetails);
+                $sheet->setCellValue("L{$row}", $combinedRemarks); // Inilipat sa Column L
+
+                // Siguraduhing kasama ang Column L sa border styling
+                $sheet->getStyle("C{$row}:L{$row}")
+                    ->getBorders()
+                    ->getAllBorders()
+                    ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+                $row++;
+            }
+
+            $fileName = 'Appendix_73_Filtered_Report_' . now()->format('Ymd_His') . '.xlsx';
+            $writer = new Xlsx($spreadsheet);
+            
+            if (ob_get_contents()) ob_end_clean();
+            return response()->streamDownload(function() use ($writer) { 
+                $writer->save('php://output'); 
+            }, $fileName, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Appendix 73 Template Export Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Export failed: ' . $e->getMessage());
+        }
     }
-}
+
+    public function exportExcel(Request $request)
+    {
+        $templatePath = storage_path('app/templates/Accountability_template.xlsx');
+        if (!file_exists($templatePath)) { 
+            return redirect()->back()->with('error', 'Excel template not found.'); 
+        }
+
+        try {
+            $spreadsheet = IOFactory::load($templatePath);
+            $sheet = $spreadsheet->getActiveSheet();
+
+            $items = $request->has('all') 
+                ? Rpcppe::orderBy('property_no', 'asc')->get() 
+                : $this->buildQuery($request)->orderBy('property_no', 'asc')->get();
+
+            if ($items->isEmpty()) {
+                return redirect()->back()->with('error', 'No records found to export.');
+            }
+
+            $row = 16; 
+            foreach ($items as $item) {
+                $sheet->setCellValue("A{$row}", $item->article);
+                $sheet->setCellValue("B{$row}", $item->description);
+                $sheet->setCellValue("C{$row}", $item->property_no);
+                $sheet->setCellValue("D{$row}", $item->unit_of_measure);
+                $sheet->setCellValue("E{$row}", $item->unit_value);
+                $sheet->setCellValue("F{$row}", $item->quantity_per_property_card);
+                $sheet->setCellValue("G{$row}", $item->quantity_per_physical_count);
+                $sheet->setCellValue("H{$row}", $item->shortage_overage_qty);
+                $sheet->setCellValue("I{$row}", $item->shortage_overage_value);
+                $sheet->setCellValue("J{$row}", $item->remarks);
+                $sheet->setCellValue("K{$row}", $item->date_acquired);
+                $sheet->setCellValue("L{$row}", $item->accountable_person);
+                $sheet->setCellValue("M{$row}", $item->transfer_to);
+                $sheet->setCellValue("N{$row}", $item->location);
+                $sheet->setCellValue("O{$row}", $item->division);
+                $sheet->setCellValue("P{$row}", $item->section_unit);
+
+                $sheet->getStyle("A{$row}:P{$row}")->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+                $row++;
+            }
+
+            $fileName = 'RPCPPE_Export_' . now()->format('Y-m-d') . '.xlsx';
+            $writer = new Xlsx($spreadsheet);
+            
+            if (ob_get_contents()) ob_end_clean();
+            return response()->streamDownload(function() use ($writer) { 
+                $writer->save('php://output'); 
+            }, $fileName);
+
+        } catch (\Exception $e) {
+            Log::error('Excel Export Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Export failed: ' . $e->getMessage());
+        }
+    }
 
     public function importExcel(Request $request)
     {
@@ -355,5 +380,47 @@ class RpcppeController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Import Error: ' . $e->getMessage());
         }
+    }
+
+    public function archiveIndex(Request $request)
+    {
+        $request->merge(['is_archive' => true]);
+
+        $availableYears = Rpcppe::selectRaw('LEFT(date_acquired, 4) as year')
+            ->whereNotNull('date_acquired')
+            ->whereRaw("date_acquired REGEXP '^[0-9]{4}'")
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+
+        $folders = Rpcppe::select(
+                'classification',
+                DB::raw('COUNT(*) as total_records'),
+                DB::raw('SUM(unit_value) as total_value')
+            )
+            ->when($request->filled('archive_year'), function($q) use ($request) {
+                return $q->where('date_acquired', 'LIKE', "{$request->archive_year}%");
+            })
+            ->groupBy('classification')
+            ->orderBy('classification', 'asc')
+            ->get();
+
+        return view('rpcppe.archive.index', compact('folders', 'availableYears'));
+    }
+
+    public function archiveFolder(Request $request, $classification)
+    {
+        $classification = urldecode($classification);
+        $request->merge([
+            'is_archive' => true,
+            'archive_classification' => $classification
+        ]);
+
+        $items = $this->buildQuery($request)
+                    ->orderBy('property_no', 'asc')
+                    ->paginate(50)
+                    ->withQueryString();
+
+        return view('rpcppe.archive.folder', compact('items', 'classification'));
     }
 }
