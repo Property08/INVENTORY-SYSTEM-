@@ -48,24 +48,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | RPCPPE ROUTES
     |=====================================================
     |*/
-   Route::prefix('rpcppe')->name('rpcppe.')->group(function () {
-    Route::get('/', [RpcppeController::class, 'index'])->name('index');
-    Route::get('/create', [RpcppeController::class, 'create'])->name('create');
-    Route::post('/', [RpcppeController::class, 'store'])->name('store');
-    
-    Route::get('/{id}/edit', [RpcppeController::class, 'edit'])->whereNumber('id')->name('edit');
-    Route::put('/{id}', [RpcppeController::class, 'update'])->whereNumber('id')->name('update');
-    Route::delete('/{id}', [RpcppeController::class, 'destroy'])->whereNumber('id')->name('destroy');
+    Route::prefix('rpcppe')->name('rpcppe.')->group(function () {
+        Route::get('/', [RpcppeController::class, 'index'])->name('index');
+        Route::get('/create', [RpcppeController::class, 'create'])->name('create');
+        Route::post('/', [RpcppeController::class, 'store'])->name('store');
+        
+        Route::get('/{id}/edit', [RpcppeController::class, 'edit'])->whereNumber('id')->name('edit');
+        Route::put('/{id}', [RpcppeController::class, 'update'])->whereNumber('id')->name('update');
+        Route::delete('/{id}', [RpcppeController::class, 'destroy'])->whereNumber('id')->name('destroy');
+        
+        // DITO MO PO ITAMA:
+        Route::post('/bulk-destroy', [RpcppeController::class, 'bulkDestroy'])->name('bulkDestroy');
 
-    Route::get('/print/table', [RpcppeController::class, 'printTable'])->name('print.table');
-    Route::get('/print/filtered', [RpcppeController::class, 'printFilteredTable'])->name('print.filtered');
-    Route::get('/reports/appendix73', [RpcppeController::class, 'appendix73'])->name('reports.appendix73');
-    Route::post('/import', [RpcppeController::class, 'importExcel'])->name('import');
-    Route::get('/reports/appendix73/export', [RpcppeController::class, 'appendix73Export'])->name('reports.appendix73.export');
-    Route::get('/export/excel', [RpcppeController::class, 'exportExcel'])->name('export.excel');
+        Route::get('/print/table', [RpcppeController::class, 'printTable'])->name('print.table');
+        Route::get('/print/filtered', [RpcppeController::class, 'printFilteredTable'])->name('print.filtered');
+        Route::get('/reports/appendix73', [RpcppeController::class, 'appendix73'])->name('reports.appendix73');
+        Route::post('/import', [RpcppeController::class, 'importExcel'])->name('import');
+        Route::get('/reports/appendix73/export', [RpcppeController::class, 'appendix73Export'])->name('reports.appendix73.export');
+        Route::get('/export/excel', [RpcppeController::class, 'exportExcel'])->name('export.excel');
 
-    Route::get('/archive', [RpcppeController::class, 'archiveIndex'])->name('archive.index');
-    Route::get('/archive/folder/{classification}', [RpcppeController::class, 'archiveFolder'])->name('archive.folder');
+        Route::get('/archive', [RpcppeController::class, 'archiveIndex'])->name('archive.index');
+        Route::get('/archive/folder/{classification}', [RpcppeController::class, 'archiveFolder'])->name('archive.folder');
     });
 
     /*

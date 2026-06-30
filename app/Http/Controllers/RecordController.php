@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 class RecordController extends Controller
 {
     /**
-     * PRIVATE HELPER: Mapping para sa Asset Labels
+     * PRIVATE HELPER: Asset Label Mapping
      */
     private function getAssetMapping()
     {
@@ -51,64 +51,96 @@ class RecordController extends Controller
      */
     public function index(Request $request)
     {
-        // 1. Kunin ang mga available na taon para sa filter dropdown (distinct years mula sa date_acquired ng Rpcppe)
-        $availableYears = Rpcppe::selectRaw('YEAR(date_acquired) as year')
+        // 1. Retrieve available years for the filter dropdown
+        $availableYears = Rpcppe::selectRaw("
+                DISTINCT CASE 
+                    WHEN date_acquired LIKE '%-%' AND LENGTH(date_acquired) > 4 THEN YEAR(STR_TO_DATE(date_acquired, '%Y-%m-%d'))
+                    ELSE LEFT(TRIM(date_acquired), 4)
+                END as year
+            ")
             ->whereNotNull('date_acquired')
-            ->distinct()
+            ->whereRaw("TRIM(date_acquired) != ''")
             ->orderBy('year', 'desc')
             ->pluck('year');
 
-        // 2. Kunin ang napiling taon mula sa request para magamit sa filtering at export logic (Kung walang pinili, magiging null o empty string ito)
+        // 2. Get the selected year from the request input
         $selectedYear = $request->input('year'); 
 
-        // 3. I-query ang folders base sa prefix/category
+        // 3. Query folders based on the property number prefix/category
+        // INAYOS: Tinanggal ang whereRaw para hindi mabawasan ang records, at nilinis ang ₱ symbol sa math logic.
         $foldersQuery = Rpcppe::selectRaw("
                 UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) as prefix,
                 COUNT(*) as total,
-                SUM(unit_value * quantity_per_physical_count) as total_amount
-            ")
-            ->whereRaw("property_no LIKE '%-%'");
+                SUM(
+                    /* 1. NILINIS ANG UNIT VALUE: Tinanggal ang ₱, kuwit, at space */
+                    CAST(
+                        REPLACE(
+                            REPLACE(
+                                REPLACE(IFNULL(unit_value, '0'), '₱', ''), 
+                            ',', ''), 
+                        ' ', '') 
+                    AS DECIMAL(15,4)) 
+                    * /* 2. NILINIS ANG QUANTITY: Kung walang physical count, gagamit ng property card qty, kundi laging 1 */
+                    CAST(
+                        CASE 
+                            WHEN quantity_per_physical_count IS NOT NULL AND TRIM(quantity_per_physical_count) != '' AND quantity_per_physical_count != 0 
+                                THEN quantity_per_physical_count
+                            WHEN quantity_per_property_card IS NOT NULL AND TRIM(quantity_per_property_card) != '' AND quantity_per_property_card != 0 
+                                THEN quantity_per_property_card
+                            ELSE 1
+                        END
+                    AS DECIMAL(15,4))
+                ) as total_amount
+            ");
 
+        // Flexible Year Filtering
         if ($selectedYear) {
-            $foldersQuery->whereYear('date_acquired', $selectedYear);
+            $foldersQuery->where(function ($q) use ($selectedYear) {
+                $q->whereYear('date_acquired', $selectedYear)
+                  ->orWhere('date_acquired', 'LIKE', $selectedYear . '%');
+            });
         }
 
         $foldersData = $foldersQuery->groupBy('prefix')->get();
 
         $mapping = $this->getAssetMapping();
 
-        $folders = $foldersData->map(function($f) use ($mapping) {
-            $f->label = $mapping[$f->prefix] ?? 'OTHER PROPERTY, PLANT AND EQUIPMENT';
+        $folders = $foldersData->map(function($f) {
+            /** @var \stdClass|\Illuminate\Database\Eloquent\Model $f */
+            $f->label = $this->getAssetMapping()[$f->prefix] ?? 'OTHER PROPERTY, PLANT AND EQUIPMENT';
             return $f;
         });
 
-        // 4. Kapag may piniling specific folder (Sub-view Inside Folder)
+        // 4. Handle sub-views when a specific folder is active
         $inventoryItems = collect();
         if ($request->has('folder')) {
             $itemsQuery = Rpcppe::whereRaw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) = ?", [$request->input('folder')]);
             
             if ($selectedYear) {
-                $itemsQuery->whereYear('date_acquired', $selectedYear);
+                $itemsQuery->where(function ($q) use ($selectedYear) {
+                    $q->whereYear('date_acquired', $selectedYear)
+                      ->orWhere('date_acquired', 'LIKE', $selectedYear . '%');
+                });
             }
             
-            $inventoryItems = $itemsQuery->orderBy('property_no')->paginate(15)->withQueryString();
+            /** @var \Illuminate\Pagination\LengthAwarePaginator $paginator */
+            $paginator = $itemsQuery->orderBy('property_no')->paginate(15);
+            $inventoryItems = $paginator->withQueryString();
         }
 
-        // Kunin din ang pangkalahatang records para sa kabilang tab gamit ang Record Model mo
+        // Fetch generalized records for the alternate view tab
         $records = Record::orderBy('year', 'desc')->get(); 
 
         return view('records.index', compact('records', 'folders', 'availableYears', 'selectedYear', 'inventoryItems'));
     }
 
     /**
-     * 2. EXPORT FOLDER TO EXCEL (Tugma sa records.export_folder at records.export_filtered)
+     * 2. EXPORT FOLDER TO EXCEL
      */
     public function exportFolder(Request $request)
     {
         try {
             $folderName = $request->input('folder');
-            
-            // Ligtas na fallback: kung walang year filter, ipasa ang walang laman ('') para mag-consolidate ang Excel
             $selectedYear = $request->input('year') ?: ''; 
             
             if (!$folderName) {
@@ -116,11 +148,8 @@ class RecordController extends Controller
             }
 
             $mapping = $this->getAssetMapping();
-
-            // Tinatawag ang FolderExport class gamit ang malinis na parameters
             $exportClass = new FolderExport($folderName, $selectedYear, $mapping);
             
-            // Nagbabago ang filename base sa kung may filter o consolidated ang download state
             $yearLabel = $selectedYear ? '_FY' . $selectedYear : '_CONSOLIDATED';
             $fileName = 'RPCPPE_Report_' . $folderName . $yearLabel . '_' . now()->format('Y-m-d') . '.xlsx';
 
@@ -133,7 +162,7 @@ class RecordController extends Controller
     }
 
     /**
-     * Alias method para sa export-filtered route para sumalo sa iisang download template logic
+     * Alias method for the export-filtered route mapping
      */
     public function exportFiltered(Request $request)
     {
@@ -148,15 +177,16 @@ class RecordController extends Controller
         $mapping = $this->getAssetMapping();
 
         $rawFolders = Rpcppe::selectRaw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1))) as prefix, COUNT(*) as total")
-            ->whereRaw("property_no LIKE '%-%'")
             ->groupBy(DB::raw("UPPER(TRIM(SUBSTRING_INDEX(property_no, '-', 1)))"))
             ->orderBy('prefix')
             ->get();
 
         $folders = $rawFolders->map(function($f) use ($mapping) {
+            /** @var \stdClass|\Illuminate\Database\Eloquent\Model $f */
             $f->label = $mapping[$f->prefix] ?? 'OTHER ASSETS';
             return $f;
         })->filter(function($f) {
+            /** @var \stdClass|\Illuminate\Database\Eloquent\Model $f */
             return $f->label !== 'OTHER ASSETS';
         });
 
@@ -172,14 +202,16 @@ class RecordController extends Controller
                 $query->where('description', 'like', '%' . $request->description . '%');
             }
             
-            $items = $query->orderBy('property_no')->paginate(15)->withQueryString();
+            /** @var \Illuminate\Pagination\LengthAwarePaginator $paginator */
+            $paginator = $query->orderBy('property_no')->paginate(15);
+            $items = $paginator->withQueryString();
         }
 
         return view('records.inventory_storage', compact('folders', 'items'));
     }
 
     /**
-     * 4. GENERATE PDF
+     * 4. GENERATE PDF REPORT
      */
     public function pdf(Record $record)
     {
