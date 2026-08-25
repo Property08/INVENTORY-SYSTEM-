@@ -118,8 +118,8 @@
                 </div>
 
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Transfer to</label>
-                    <input type="text" name="transfer_to" value="{{ old('transfer_to') }}" placeholder="Full Name"
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Receive From</label>
+                    <input type="text" name="receive_from" value="{{ old('receive_from') }}" placeholder="Full Name"
                            class="w-full border-slate-200 rounded-xl px-4 py-3 text-sm shadow-sm">
                 </div>
 

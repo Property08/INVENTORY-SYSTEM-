@@ -1,3 +1,7 @@
 *
 !public/
 !.gitignore
+_ide_helper.php
+_ide_helper_models.php
+ide_stubs.php
+.phpstorm.meta.php/

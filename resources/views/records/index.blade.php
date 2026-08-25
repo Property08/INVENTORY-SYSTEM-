@@ -287,7 +287,7 @@
             { label: 'Remarks', value: item.remarks || '--' },
             { label: 'Date Acquired', value: item.date_acquired || '--' },
             { label: 'Accountable Person', value: item.accountable_person },
-            { label: 'Transfer To', value: item.transfer_to || '--' },
+            { label: 'Receive From', value: item.receive_from || '--' },
             { label: 'Location', value: item.location },
             { label: 'Division', value: item.division },
             { label: 'Section_unit', value: item.section_unit },

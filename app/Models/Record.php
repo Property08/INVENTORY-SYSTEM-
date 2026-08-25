@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-USE App\Models\PPERecap;
+use App\Models\PPERecap;
 
 class Record extends Model
 {
@@ -22,11 +22,5 @@ class Record extends Model
     public function recaps()
     {
         return $this->hasMany(PPERecap::class);
-        
     }
-    protected $casts = [
-    'date_acquired' => 'date:m-d-Y',
-];
 }
-
-

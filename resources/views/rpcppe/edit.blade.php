@@ -134,8 +134,8 @@
                 </div>
 
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Transferred To</label>
-                    <input type="text" name="transfer_to" value="{{ old('transfer_to', $rpcppe->transfer_to) }}"
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1">Receive From</label>
+                    <input type="text" name="receive_from" value="{{ old('receive_from', $rpcppe->receive_from) }}"
                            class="w-full border-amber-200 bg-amber-50/30 rounded-xl px-4 py-3 text-sm shadow-sm focus:ring-2 focus:ring-amber-500/20">
                 </div>
 

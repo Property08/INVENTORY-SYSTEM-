@@ -104,7 +104,7 @@
             </div>
 
           <div class="lg:col-span-2">
-            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Accountable, Transfer to: / Remarks</label>
+            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Accountable, Receive from: / Remarks</label>
             <input type="text" name="search_general" value="{{ request('search_general') }}" list="name_suggestions"
                 class="w-full border-slate-300 rounded text-xs py-2 px-3 focus:ring-1 focus:ring-slate-400"
                 placeholder="Name or Remarks...">
@@ -159,7 +159,7 @@
                         <th class="p-2 border w-56">Remarks</th>
                         <th class="p-2 border w-32 text-center">Date Acquired</th>
                         <th class="p-2 border w-48">Accountable Person</th>
-                        <th class="p-2 border w-48">Transfer to</th>
+                        <th class="p-2 border w-48">Receive from</th>
                         <th class="p-2 border w-40">Location</th>
                         <th class="p-2 border w-40">Division</th>
                         <th class="p-2 border w-40">Section</th>
@@ -168,47 +168,67 @@
                 </thead>
                 <tbody class="divide-y divide-slate-200">
 
-                    @forelse($items as $item)
-                    <tr class="text-[11px] hover:bg-blue-50/50 transition-colors group">
-                       <td class="p-2 border sticky left-0 bg-white group-hover:bg-blue-50/50 font-bold">
-                            <button type="button" onclick="viewFullDetails({{ json_encode($item) }})" class="text-blue-700 hover:text-blue-900 hover:underline text-left">
-                                {{ $item->property_no }}
-                            </button>
+                   @forelse($items as $item)
+                @php
+                    $remarks = strtoupper(trim($item->remarks ?? ''));
+                    
+                    // I-check kung naglalaman ng DISPOS (para huli pati DISPOSSED) o WMR
+                    $isDisposedOrWmr = str_contains($remarks, 'DISPOS') || str_contains($remarks, 'WMR');
+                    
+                    // Dynamic classes
+                    $rowBg = $isDisposedOrWmr ? 'bg-red-100 hover:bg-red-200/80 text-red-950 font-medium' : 'hover:bg-blue-50/50';
+                    $stickyBg = $isDisposedOrWmr ? '!bg-red-100 group-hover:!bg-red-200/80' : 'bg-white group-hover:bg-blue-50/50';
+                @endphp
 
-                        </td>
-                        <td class="p-2 border uppercase font-semibold text-slate-800">{{ $item->article }}</td>
-                        <td class="p-2 border text-slate-700 italic">{{ Str::limit($item->description, 50) }}</td>    
-                        <td class="p-2 border text-center">{{ $item->unit_of_measure }}</td>
-                        <td class="p-2 border text-right">₱{{ number_format($item->unit_value, 2) }}</td>
-                        <td class="p-2 border text-center">{{ $item->quantity_per_property_card }}</td>
-                        <td class="p-2 border text-center">{{ $item->quantity_per_physical_count }}</td>
-                        <td class="p-2 border text-center font-black text-orange-600">{{ $item->shortage_overage_qty }}</td>
-                        <td class="p-2 border text-right font-black text-orange-600">₱{{ number_format($item->shortage_overage_value, 2) }}</td>
-                        <td class="p-2 border text-slate-500 italic">{{ $item->remarks ?? '--' }}</td>
-                        <td class="p-2 border text-center">{{ $item->date_acquired ?? '--' }}</td>
-                        <td class="p-2 border uppercase">{{ $item->accountable_person }}</td>
-                        <td class="p-2 border uppercase">{{ $item->transfer_to ?? '--' }}</td>
-                        <td class="p-2 border uppercase">{{ $item->location }}</td>
-                        <td class="p-2 border uppercase font-bold">{{ $item->division }}</td>
-                        <td class="p-2 border uppercase">{{ $item->section_unit }}</td>
-                        <td class="p-2 border sticky right-0 bg-white group-hover:bg-blue-50/50 text-center">
-                            <div class="flex justify-center gap-3">
-                                <a href="{{ route('rpcppe.edit', $item->id) }}" class="text-indigo-600 hover:scale-125 transition-transform" title="Edit">
-                                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                </a>
+                <tr class="text-[11px] transition-colors group {{ $rowBg }}">
+                    
+                    {{-- Sticky Left Column (Property No.) --}}
+                    <td class="p-2 border sticky left-0 z-10 font-bold {{ $stickyBg }}">
+                        <button type="button" onclick="viewFullDetails({{ json_encode($item) }})" class="text-blue-700 hover:text-blue-900 hover:underline text-left">
+                            {{ $item->property_no }}
+                        </button>
+                    </td>
 
-                                <form action="{{ route('rpcppe.destroy', $item->id) }}" method="POST" class="delete-form inline">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="text-red-400 hover:text-red-700 transition-transform hover:scale-125">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="17" class="p-10 text-center text-slate-400 italic">No records found.</td></tr>
-                    @endforelse
+                    <td class="p-2 border uppercase font-semibold text-slate-800">{{ $item->article }}</td>
+                    <td class="p-2 border text-slate-700 italic">{{ Str::limit($item->description, 50) }}</td>    
+                    <td class="p-2 border text-center">{{ $item->unit_of_measure }}</td>
+                    <td class="p-2 border text-right">₱{{ number_format($item->unit_value, 2) }}</td>
+                    <td class="p-2 border text-center">{{ $item->quantity_per_property_card }}</td>
+                    <td class="p-2 border text-center">{{ $item->quantity_per_physical_count }}</td>
+                    <td class="p-2 border text-center font-black text-orange-600">{{ $item->shortage_overage_qty }}</td>
+                    <td class="p-2 border text-right font-black text-orange-600">₱{{ number_format($item->shortage_overage_value, 2) }}</td>
+                    
+                    {{-- Remarks Column --}}
+                    <td class="p-2 border italic font-bold {{ $isDisposedOrWmr ? 'text-red-700' : 'text-slate-500' }}">
+                        {{ $item->remarks ?? '--' }}
+                    </td>
+
+                    <td class="p-2 border text-center">{{ $item->date_acquired ?? '--' }}</td>
+                    <td class="p-2 border uppercase">{{ $item->accountable_person }}</td>
+                    <td class="p-2 border uppercase">{{ $item->receive_from ?? '--' }}</td>
+                    <td class="p-2 border uppercase">{{ $item->location }}</td>
+                    <td class="p-2 border uppercase font-bold">{{ $item->division }}</td>
+                    <td class="p-2 border uppercase">{{ $item->section_unit }}</td>
+
+                    {{-- Sticky Right Column (Actions) --}}
+                    <td class="p-2 border sticky right-0 z-10 text-center {{ $stickyBg }}">
+                        <div class="flex justify-center gap-3">
+                            <a href="{{ route('rpcppe.edit', $item->id) }}" class="text-indigo-600 hover:scale-125 transition-transform" title="Edit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </a>
+
+                            <form action="{{ route('rpcppe.destroy', $item->id) }}" method="POST" class="delete-form inline">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="text-red-400 hover:text-red-700 transition-transform hover:scale-125">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            @empty
+                <tr><td colspan="17" class="p-10 text-center text-slate-400 italic">No records found.</td></tr>
+@endforelse
                 </tbody>
             </table>
         </div>
@@ -278,7 +298,7 @@
             { label: 'Remarks', value: item.remarks || '--' },
             { label: 'Date Acquired', value: item.date_acquired || '--' },
             { label: 'Accountable Person', value: item.accountable_person },
-            { label: 'Transfer To', value: item.transfer_to || '--' },
+            { label: 'Receive From', value: item.receive_from || '--' },
             { label: 'Section / Unit', value: item.section_unit },
             { label: 'Location', value: item.location },
             { label: 'Division', value: item.division }

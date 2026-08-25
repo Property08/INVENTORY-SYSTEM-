@@ -31,7 +31,7 @@ class Rpcppe extends Model
         'ptsd',
         'division',
         'section_unit',
-        'transfer_to',
+        'receive_from',
         'shortage_overage_qty',
         'shortage_overage_value',
     ];

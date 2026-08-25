@@ -62,7 +62,7 @@ class RpcppeController extends Controller
             $search = $request->search_general;
             $query->where(function($q) use ($search) {
                 $q->where('accountable_person', 'LIKE', "%{$search}%")
-                  ->orWhere('transfer_to', 'LIKE', "%{$search}%")
+                  ->orWhere('receive_from', 'LIKE', "%{$search}%")
                   ->orWhere('remarks', 'LIKE', "%{$search}%");
             });
         }
@@ -88,7 +88,7 @@ class RpcppeController extends Controller
         $allPropertyNumbers = Rpcppe::distinct()->pluck('property_no')->sort();
         $locations = Rpcppe::whereNotNull('location')->distinct()->pluck('location')->sort();
         $names1 = Rpcppe::whereNotNull('accountable_person')->distinct()->pluck('accountable_person');
-        $names2 = Rpcppe::whereNotNull('transfer_to')->distinct()->pluck('transfer_to');
+        $names2 = Rpcppe::whereNotNull('receive_from')->distinct()->pluck('receive_from');
         $allNames = $names1->merge($names2)->unique()->sort();
 
         $items = $this->buildQuery($request)
@@ -124,7 +124,7 @@ class RpcppeController extends Controller
             'division' => 'nullable|string',
             'section_unit' => 'nullable|string',
             'ptsd' => 'nullable|string',
-            'transfer_to' => 'nullable|string',
+            'receive_from' => 'nullable|string',
         ], [
             'property_no.unique' => ' (' . $request->property_no . ') nauna nang nakarehistro.',
         ]);
@@ -163,7 +163,7 @@ class RpcppeController extends Controller
             'division' => 'nullable|string',
             'section_unit' => 'nullable|string',
             'ptsd' => 'nullable|string',
-            'transfer_to' => 'nullable|string',
+            'receive_from' => 'nullable|string',
         ]);
 
         $prefix = explode('-', $request->property_no)[0];
@@ -379,7 +379,7 @@ class RpcppeController extends Controller
                 $sheet->setCellValue("J{$row}", $item->remarks);
                 $sheet->setCellValue("K{$row}", $item->date_acquired);
                 $sheet->setCellValue("L{$row}", $item->accountable_person);
-                $sheet->setCellValue("M{$row}", $item->transfer_to);
+                $sheet->setCellValue("M{$row}", $item->receive_from);
                 $sheet->setCellValue("N{$row}", $item->location);
                 $sheet->setCellValue("O{$row}", $item->division);
                 $sheet->setCellValue("P{$row}", $item->section_unit);
