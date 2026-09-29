@@ -6,6 +6,7 @@ use App\Models\Rpcppe;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithStartRow;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class RpcppeImport implements ToModel, WithStartRow
 {
@@ -13,10 +14,20 @@ class RpcppeImport implements ToModel, WithStartRow
 
     public function model(array $row)
     {
-        // Skip current row if Article identifier is empty
-        if (empty($row[0])) { return null; }
+        // 1. Skip row kung walang laman ang Article column ($row[0])
+        $article = isset($row[0]) ? trim((string)$row[0]) : '';
+        if (empty($article)) { 
+            return null; 
+        }
 
-        $propertyNo = $row[2] ?? '';
+        // 2. Kunin ang Property Number mula sa Excel ($row[2])
+        $propertyNo = isset($row[2]) ? trim((string)$row[2]) : '';
+
+        // 3. FIX: Kapag walang Property Number sa Excel, mag-generate ng Unique Fallback Code
+        if (empty($propertyNo)) {
+            $propertyNo = 'N/A-' . Str::upper(Str::random(6));
+        }
+
         $prefix = strtoupper(trim(explode('-', $propertyNo)[0]));
 
         // Synchronized classification mapping based on controller
@@ -47,9 +58,9 @@ class RpcppeImport implements ToModel, WithStartRow
         ];
 
         return new Rpcppe([
-            'article'                     => trim($row[0]),
+            'article'                     => $article,
             'description'                 => $row[1] ?? null,
-            'property_no'                 => $row[2],
+            'property_no'                 => $propertyNo, // Hinding-hindi na magiging NULL
             'classification'              => $mapping[$prefix] ?? 'OTHERS',
             'unit_of_measure'             => $row[3] ?? null,
             'unit_value'                  => $this->cleanNumber($row[4] ?? 0),
@@ -107,7 +118,6 @@ class RpcppeImport implements ToModel, WithStartRow
         $value = trim($value);
 
         try {
-            // INAYOS: Kung 4-digit year lang gaya ng 2020, ibalik lang ang string na "2020"
             if (ctype_digit((string)$value) && strlen((string)$value) === 4) {
                 return (string)$value; 
             }

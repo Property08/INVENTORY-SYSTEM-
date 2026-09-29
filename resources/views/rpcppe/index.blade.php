@@ -2,12 +2,9 @@
 @section('title', 'RPCPPE Management System')
 @section('content')
 
-
 <div class="max-w-[1600px] mx-auto px-2 sm:px-4 py-4 sm:py-6 font-sans text-slate-900">
     {{-- HEADER SECTION --}}
-
     <div class="flex flex-col lg:flex-row lg:items-end justify-between mb-6 border-b-2 border-slate-300 pb-5 gap-4">
-
         <div class="max-w-3xl">
             <h1 class="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-slate-800 uppercase leading-tight">
                 Report on the Physical Count of Property, Plant and Equipment
@@ -22,14 +19,14 @@
                 <button type="button" id="menu-button"
                         class="w-full inline-flex items-center justify-center gap-2 bg-slate-900 text-emerald-400 border border-emerald-500/30 px-5 py-2.5 rounded shadow-[0_0_15px_rgba(16,185,129,0.1)] text-xs font-black tracking-widest hover:bg-emerald-600 hover:text-white transition-all duration-300">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                   GENERATE REPORTS
+                    GENERATE REPORTS
                 </button>
 
                 <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700 shadow-2xl rounded-lg z-50 overflow-hidden ring-1 ring-emerald-500/20">
                     <div class="px-4 py-2 bg-slate-800/50 text-[10px] font-black text-emerald-500 tracking-widest border-b border-slate-700">PDF DOCUMENTS</div>
 
                     <a href="{{ route('rpcppe.print.table') }}" target="_blank" class="flex items-center gap-3 px-4 py-3 text-xs text-slate-300 hover:bg-emerald-600 hover:text-white transition">
-                     <span class="opacity-70">📄</span> RPCPPE Report Table
+                        <span class="opacity-70">📄</span> RPCPPE Report Table
                     </a>
 
                     <a href="{{ route('rpcppe.reports.appendix73') }}" target="_blank" class="flex items-center gap-3 px-4 py-3 text-xs text-slate-300 hover:bg-emerald-600 hover:text-white transition border-b border-slate-700">
@@ -43,7 +40,6 @@
                         <span class="text-[9px] bg-emerald-500/10 px-2 py-0.5 rounded text-emerald-500">ACTIVE</span>
                     </a>
 
-                    {{-- 🌟 FIXED WITH TWIST: Ngayon ay kasama na ang request()->query() para sumunod sa sinaksak na filter --}}
                     <a href="{{ route('rpcppe.reports.appendix73.export', request()->query()) }}" class="flex items-center gap-3 px-4 py-3 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition border-b border-slate-700/50">
                         <span class="opacity-70">📥</span> Appendix 73 Master
                     </a>
@@ -66,7 +62,7 @@
                 <button type="button" onclick="document.getElementById('importFile').click()"
                         class="w-full sm:w-auto bg-emerald-600 text-white px-5 py-2.5 rounded shadow-md text-xs font-bold hover:bg-emerald-700 transition flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                     </svg>
                     IMPORT XLSX
                 </button>
@@ -75,7 +71,6 @@
     </div>
 
     {{-- FILTER FORM --}}
-
     <div class="bg-white border border-slate-300 rounded-lg p-4 sm:p-5 mb-6 shadow-sm">
         <form method="GET" action="{{ route('rpcppe.index') }}" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
 
@@ -85,7 +80,7 @@
                       class="w-full border-slate-300 rounded text-xs py-2 px-3 focus:ring-1 focus:ring-slate-400" placeholder="Search item...">
             </div>
 
-             <div>
+            <div>
                 <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Description</label>
                 <input type="text" name="description" value="{{ request('description') }}"
                    class="w-full border-slate-300 rounded text-xs py-2 px-3 focus:ring-1 focus:ring-slate-400" placeholder="Search item...">
@@ -103,17 +98,17 @@
                    class="w-full border-slate-300 rounded text-xs py-2 px-3 focus:ring-1 focus:ring-slate-400" placeholder="Year or Full Date">
             </div>
 
-          <div class="lg:col-span-2">
-            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Accountable, Receive from: / Remarks</label>
-            <input type="text" name="search_general" value="{{ request('search_general') }}" list="name_suggestions"
-                class="w-full border-slate-300 rounded text-xs py-2 px-3 focus:ring-1 focus:ring-slate-400"
-                placeholder="Name or Remarks...">
-            <datalist id="name_suggestions">
-                @foreach($allNames as $name)
-                    <option value="{{ $name }}"></option>
-                @endforeach
-            </datalist>
-          </div>
+            <div class="lg:col-span-2">
+                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Accountable, Receive from: / Remarks</label>
+                <input type="text" name="search_general" value="{{ request('search_general') }}" list="name_suggestions"
+                    class="w-full border-slate-300 rounded text-xs py-2 px-3 focus:ring-1 focus:ring-slate-400"
+                    placeholder="Name or Remarks...">
+                <datalist id="name_suggestions">
+                    @foreach($allNames as $name)
+                        <option value="{{ $name }}"></option>
+                    @endforeach
+                </datalist>
+            </div>
 
             <div>
                 <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Location</label>
@@ -125,7 +120,7 @@
             <div>      
                 <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Division</label>
                 <input type="text" name="division" value="{{ request('division') }}"
-                    class="w-full border-slate-300 rounded text-xs py-2 px-3 focus:ring-1 focus:ring-slate-400"placeholder="Search division...">
+                    class="w-full border-slate-300 rounded text-xs py-2 px-3 focus:ring-1 focus:ring-slate-400" placeholder="Search division...">
             </div>
 
             <div class="flex items-end gap-2">
@@ -133,7 +128,6 @@
                     FILTER
                 </button>
                 <a href="{{ route('rpcppe.index') }}" class="flex-1 flex items-center justify-center bg-white border border-slate-300 text-slate-600 px-3 py-2 rounded text-xs font-bold hover:bg-slate-100 transition shadow-sm h-[34px]">
-
                     RESET
                 </a>
             </div>
@@ -141,10 +135,9 @@
     </div>
 
     {{-- TABLE SECTION --}}
-
     <div class="bg-white border border-slate-300 rounded shadow-xl overflow-hidden">
         <div class="overflow-x-auto scrollbar-thin">
-            <table class="w-full text-left border-collapse min-w-[1800px] table-fixed">
+            <table class="w-full text-left border-collapse min-w-[1850px] table-fixed">
                 <thead class="bg-gray-200 border-b-2 border-slate-300 sticky top-0 z-30">
                     <tr class="text-[10px] text-slate-700 uppercase tracking-wider">
                         <th class="p-2 border w-40 sticky left-0 bg-gray-200 z-10">Property No.</th>
@@ -163,72 +156,69 @@
                         <th class="p-2 border w-40">Location</th>
                         <th class="p-2 border w-40">Division</th>
                         <th class="p-2 border w-40">Section</th>
-                        <th class="p-3 border w-24 text-center sticky right-0 bg-gray-200 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</th>
+                        {{-- INAYOS: Dinagdagan ang width (w-28) at min-width para kasya ang buttons --}}
+                        <th class="p-3 border w-28 min-w-[110px] text-center sticky right-0 bg-gray-200 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200">
+                    @forelse($items as $item)
+                        @php
+                            $remarks = strtoupper(trim($item->remarks ?? ''));
+                            $isDisposedOrWmr = str_contains($remarks, 'DISPOS') || str_contains($remarks, 'WMR');
+                            
+                            $rowBg = $isDisposedOrWmr ? 'bg-red-100 hover:bg-red-200/80 text-red-950 font-medium' : 'hover:bg-blue-50/50';
+                            $stickyBg = $isDisposedOrWmr ? '!bg-red-100 group-hover:!bg-red-200/80' : 'bg-white group-hover:bg-blue-50/50';
+                        @endphp
 
-                   @forelse($items as $item)
-                @php
-                    $remarks = strtoupper(trim($item->remarks ?? ''));
-                    
-                    // I-check kung naglalaman ng DISPOS (para huli pati DISPOSSED) o WMR
-                    $isDisposedOrWmr = str_contains($remarks, 'DISPOS') || str_contains($remarks, 'WMR');
-                    
-                    // Dynamic classes
-                    $rowBg = $isDisposedOrWmr ? 'bg-red-100 hover:bg-red-200/80 text-red-950 font-medium' : 'hover:bg-blue-50/50';
-                    $stickyBg = $isDisposedOrWmr ? '!bg-red-100 group-hover:!bg-red-200/80' : 'bg-white group-hover:bg-blue-50/50';
-                @endphp
-
-                <tr class="text-[11px] transition-colors group {{ $rowBg }}">
-                    
-                    {{-- Sticky Left Column (Property No.) --}}
-                    <td class="p-2 border sticky left-0 z-10 font-bold {{ $stickyBg }}">
-                        <button type="button" onclick="viewFullDetails({{ json_encode($item) }})" class="text-blue-700 hover:text-blue-900 hover:underline text-left">
-                            {{ $item->property_no }}
-                        </button>
-                    </td>
-
-                    <td class="p-2 border uppercase font-semibold text-slate-800">{{ $item->article }}</td>
-                    <td class="p-2 border text-slate-700 italic">{{ Str::limit($item->description, 50) }}</td>    
-                    <td class="p-2 border text-center">{{ $item->unit_of_measure }}</td>
-                    <td class="p-2 border text-right">₱{{ number_format($item->unit_value, 2) }}</td>
-                    <td class="p-2 border text-center">{{ $item->quantity_per_property_card }}</td>
-                    <td class="p-2 border text-center">{{ $item->quantity_per_physical_count }}</td>
-                    <td class="p-2 border text-center font-black text-orange-600">{{ $item->shortage_overage_qty }}</td>
-                    <td class="p-2 border text-right font-black text-orange-600">₱{{ number_format($item->shortage_overage_value, 2) }}</td>
-                    
-                    {{-- Remarks Column --}}
-                    <td class="p-2 border italic font-bold {{ $isDisposedOrWmr ? 'text-red-700' : 'text-slate-500' }}">
-                        {{ $item->remarks ?? '--' }}
-                    </td>
-
-                    <td class="p-2 border text-center">{{ $item->date_acquired ?? '--' }}</td>
-                    <td class="p-2 border uppercase">{{ $item->accountable_person }}</td>
-                    <td class="p-2 border uppercase">{{ $item->receive_from ?? '--' }}</td>
-                    <td class="p-2 border uppercase">{{ $item->location }}</td>
-                    <td class="p-2 border uppercase font-bold">{{ $item->division }}</td>
-                    <td class="p-2 border uppercase">{{ $item->section_unit }}</td>
-
-                    {{-- Sticky Right Column (Actions) --}}
-                    <td class="p-2 border sticky right-0 z-10 text-center {{ $stickyBg }}">
-                        <div class="flex justify-center gap-3">
-                            <a href="{{ route('rpcppe.edit', $item->id) }}" class="text-indigo-600 hover:scale-125 transition-transform" title="Edit">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                            </a>
-
-                            <form action="{{ route('rpcppe.destroy', $item->id) }}" method="POST" class="delete-form inline">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="text-red-400 hover:text-red-700 transition-transform hover:scale-125">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <tr class="text-[11px] transition-colors group {{ $rowBg }}">
+                            
+                            {{-- Sticky Left Column (Property No.) --}}
+                            <td class="p-2 border sticky left-0 z-10 font-bold {{ $stickyBg }}">
+                                <button type="button" onclick="viewFullDetails({{ json_encode($item) }})" class="text-blue-700 hover:text-blue-900 hover:underline text-left">
+                                    {{ $item->property_no }}
                                 </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            @empty
-                <tr><td colspan="17" class="p-10 text-center text-slate-400 italic">No records found.</td></tr>
-@endforelse
+                            </td>
+
+                            <td class="p-2 border uppercase font-semibold text-slate-800">{{ $item->article }}</td>
+                            <td class="p-2 border text-slate-700 italic">{{ Str::limit($item->description, 50) }}</td>    
+                            <td class="p-2 border text-center">{{ $item->unit_of_measure }}</td>
+                            <td class="p-2 border text-right">₱{{ number_format($item->unit_value, 2) }}</td>
+                            <td class="p-2 border text-center">{{ $item->quantity_per_property_card }}</td>
+                            <td class="p-2 border text-center">{{ $item->quantity_per_physical_count }}</td>
+                            <td class="p-2 border text-center font-black text-orange-600">{{ $item->shortage_overage_qty }}</td>
+                            <td class="p-2 border text-right font-black text-orange-600">₱{{ number_format($item->shortage_overage_value, 2) }}</td>
+                            
+                            {{-- Remarks Column --}}
+                            <td class="p-2 border italic font-bold {{ $isDisposedOrWmr ? 'text-red-700' : 'text-slate-500' }}">
+                                {{ $item->remarks ?? '--' }}
+                            </td>
+
+                            <td class="p-2 border text-center">{{ $item->date_acquired ?? '--' }}</td>
+                            <td class="p-2 border uppercase">{{ $item->accountable_person }}</td>
+                            <td class="p-2 border uppercase">{{ $item->receive_from ?? '--' }}</td>
+                            <td class="p-2 border uppercase">{{ $item->location }}</td>
+                            <td class="p-2 border uppercase font-bold">{{ $item->division }}</td>
+                            <td class="p-2 border uppercase">{{ $item->section_unit }}</td>
+
+                            {{-- Sticky Right Column (Actions) -- INAYOS: whitespace-nowrap at flex layout --}}
+                            <td class="p-2 border sticky right-0 z-10 text-center whitespace-nowrap {{ $stickyBg }}">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="{{ route('rpcppe.edit', $item->id) }}" class="p-1 text-indigo-600 hover:text-indigo-900 hover:scale-110 transition-transform" title="Edit">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                    </a>
+
+                                    <form action="{{ route('rpcppe.destroy', $item->id) }}" method="POST" class="delete-form inline">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="p-1 text-red-500 hover:text-red-700 transition-transform hover:scale-110" title="Manage / Delete">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="17" class="p-10 text-center text-slate-400 italic">No records found.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
@@ -246,7 +236,6 @@
 </div>
 
 {{-- CAPTURE MODAL --}}
-
 <div id="descModal" class="hidden fixed inset-0 z-[100] overflow-y-auto" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen p-4">
         <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeDescriptionModal()"></div>
@@ -260,18 +249,14 @@
                     <button onclick="closeDescriptionModal()" class="text-slate-400 hover:text-slate-600 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
                 </div>
 
-              <div class="mt-4 bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-inner max-h-[60vh] overflow-y-auto">
+                <div class="mt-4 bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-inner max-h-[60vh] overflow-y-auto">
                     <table class="w-full text-left text-xs">
-
                         <tbody id="modal-details-body" class="divide-y divide-slate-200"></tbody>
-
                     </table>
                 </div>
             </div>
             <div class="bg-slate-100 px-6 py-4 flex justify-end">
-
                 <button type="button" onclick="closeDescriptionModal()" class="px-6 py-2 bg-slate-800 text-white text-xs font-black rounded hover:bg-black transition tracking-widest">CLOSE PREVIEW</button>
-
             </div>
         </div>
     </div>
@@ -280,7 +265,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-
     function viewFullDetails(item) {
         const modal = document.getElementById('descModal');
         document.getElementById('modal-article-title').innerText = item.article || 'N/A';
@@ -302,8 +286,8 @@
             { label: 'Section / Unit', value: item.section_unit },
             { label: 'Location', value: item.location },
             { label: 'Division', value: item.division }
-
         ];
+
         tbody.innerHTML = fields.map(field => `
             <tr>
                 <td class="p-3 font-black text-slate-500 uppercase w-1/3 bg-slate-100/50 border-r border-slate-200">${field.label}</td>
@@ -352,7 +336,7 @@
                             document.getElementById('importForm').submit();
                         } else {
                             this.value = '';
-                    }
+                        }
                     });
                 }
             });
@@ -438,4 +422,4 @@
     .overflow-x-auto::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .overflow-x-auto::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 </style>
-@endsection 
+@endsection

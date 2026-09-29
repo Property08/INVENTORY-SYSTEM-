@@ -198,9 +198,34 @@ class RpcppeController extends Controller
                 }
             }
 
+            // --- FLEXIBLE EXTRACTION LOGIC MULA SA REMARKS ---
+            $accountableName = null;
+            $location = null;
+            $remarks = $item->remarks;
+
+            if (!empty($remarks)) {
+                // 1. Pagkuha ng Location na nasa loob ng parentheses (hal. loc. WAREHOUSE o WAREHOUSE)
+                if (preg_match('/\((?:loc\.\s*)?([^\)]+)\)/i', $remarks, $locMatches)) {
+                    $potentialLoc = trim($locMatches[1]);
+                    if (!preg_match('/WMR|\d{4}/i', $potentialLoc)) {
+                        $location = $potentialLoc;
+                    }
+                }
+
+                // 2. Pagkuha ng Pangalan (Kahit nasaan man banda: unahan, gitna, o dulo)
+                $cleanName = preg_replace('/(submitted\s*by\.?|WMR|\b\d{4}\b|\([^\)]*\))/i', '', $remarks);
+                $cleanName = trim(str_replace(['/', '-', '.'], ' ', $cleanName));
+                
+                if (!empty($cleanName) && strlen($cleanName) > 2) {
+                    $accountableName = trim(preg_replace('/\s+/', ' ', $cleanName));
+                }
+            }
+            // -------------------------------------------------
+
             Disposable::create([
                 'property_number' => $item->property_no,
-                'name'            => $item->accountable_person ?? 'N/A',
+                'name'            => $accountableName,
+                'place'           => $location,
                 'quantity'        => $item->quantity_per_physical_count ?? 0,
                 'description'     => $item->description,
                 'DateAcquired'    => $formattedDate,
@@ -221,12 +246,8 @@ class RpcppeController extends Controller
         }
     }
 
-    /**
-     * NEW ACTION: Handle Bulk Actions (Delete / Dispose)
-     */
     public function bulkDestroy(Request $request)
     {
-        // 1. Validation: Siguraduhin na tama ang data mula sa Blade
         $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'exists:rpcppe,id',
@@ -236,19 +257,40 @@ class RpcppeController extends Controller
         $items = Rpcppe::whereIn('id', $request->ids)->get();
         $action = $request->bulk_action_type;
 
-        // 2. Permanent Delete Logic
         if ($action === 'permanent') {
             Rpcppe::whereIn('id', $request->ids)->delete();
             return redirect()->route('rpcppe.index')->with('success', count($request->ids) . ' records permanently deleted.');
         }
 
-        // 3. Disposal Logic (Atomic Transaction)
         DB::beginTransaction();
         try {
             foreach ($items as $item) {
+                // --- FLEXIBLE EXTRACTION LOGIC MULA SA REMARKS (BULK) ---
+                $accountableName = null;
+                $location = null;
+                $remarks = $item->remarks;
+
+                if (!empty($remarks)) {
+                    if (preg_match('/\((?:loc\.\s*)?([^\)]+)\)/i', $remarks, $locMatches)) {
+                        $potentialLoc = trim($locMatches[1]);
+                        if (!preg_match('/WMR|\d{4}/i', $potentialLoc)) {
+                            $location = $potentialLoc;
+                        }
+                    }
+
+                    $cleanName = preg_replace('/(submitted\s*by\.?|WMR|\b\d{4}\b|\([^\)]*\))/i', '', $remarks);
+                    $cleanName = trim(str_replace(['/', '-', '.'], ' ', $cleanName));
+                    
+                    if (!empty($cleanName) && strlen($cleanName) > 2) {
+                        $accountableName = trim(preg_replace('/\s+/', ' ', $cleanName));
+                    }
+                }
+                // ---------------------------------------------------------
+
                 Disposable::create([
                     'property_number' => $item->property_no,
-                    'name'            => $item->accountable_person ?? 'N/A',
+                    'name'            => $accountableName,
+                    'place'           => $location,
                     'quantity'        => $item->quantity_per_physical_count ?? 0,
                     'description'     => $item->description,
                     'DateAcquired'    => $item->date_acquired,
@@ -316,11 +358,11 @@ class RpcppeController extends Controller
 
                 $extraDetails = [];
                 if (!empty($item->date_acquired))      $extraDetails[] = "Date: " . $item->date_acquired;
-                if (!empty($item->location))           $extraDetails[] = "Loc: " . $item->location;
+                if (!empty($item->location))          $extraDetails[] = "Loc: " . $item->location;
                 if (!empty($item->accountable_person)) $extraDetails[] = "Acct Person: " . $item->accountable_person;
-                if (!empty($item->division))           $extraDetails[] = "Div: " . $item->division;
-                if (!empty($item->section_unit))       $extraDetails[] = "Sec: " . $item->section_unit;
-                if (!empty($item->remarks))            $extraDetails[] = "Remarks: " . $item->remarks;
+                if (!empty($item->division))          $extraDetails[] = "Div: " . $item->division;
+                if (!empty($item->section_unit))      $extraDetails[] = "Sec: " . $item->section_unit;
+                if (!empty($item->remarks))           $extraDetails[] = "Remarks: " . $item->remarks;
 
                 $combinedRemarks = implode(' | ', $extraDetails);
                 $sheet->setCellValue("L{$row}", $combinedRemarks);
